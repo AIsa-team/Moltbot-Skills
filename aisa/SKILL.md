@@ -1,13 +1,47 @@
 ---
-name: aisa
-description: "Unified pay-per-use API backend for AI agents. Access Twitter/X data (read & write), web search, academic papers, news, and LLM routing with one API key. Use AIsa when you need paid data sources without managing separate API keys, or when running on servers without browser access."
-homepage: https://aisa.one
-metadata: {"openclaw":{"emoji":"⚡","requires":{"bins":["curl","python3"],"env":["AISA_API_KEY"]},"primaryEnv":"AISA_API_KEY"}}
+name: openclaw-starter-kit
+description: "OpenClaw Starter Kit - The definitive starting point for building autonomous agents. Powered by AIsa unified API: Twitter/X (read & write), web search, academic papers, news, and LLM routing with one API key."
+homepage: https://openclaw.ai
+metadata: {"openclaw":{"emoji":"🦞","requires":{"bins":["curl","python3"],"env":["AISA_API_KEY"]},"primaryEnv":"AISA_API_KEY"}}
 ---
 
-# AIsa - One Key, All Resources ⚡
+# OpenClaw Starter Kit 🦞
 
-Unified, pay-per-use access to paid data sources for AI agents.
+**The definitive starting point for autonomous agents. Powered by AIsa.**
+
+One API key. All the data sources your agent needs.
+
+## 🔥 What Can You Do?
+
+### Morning Briefing (Scheduled)
+```
+"Send me a daily briefing at 8am with:
+- My portfolio performance (NVDA, TSLA, BTC)
+- Twitter trends in AI
+- Top news in my industry"
+```
+
+### Competitor Intelligence
+```
+"Monitor @OpenAI - alert me on new tweets, news mentions, and paper releases"
+```
+
+### Investment Research
+```
+"Full analysis on NVDA: price trends, insider trades, analyst estimates, 
+SEC filings, and Twitter sentiment"
+```
+
+### Startup Validation
+```
+"Research the market for AI writing tools - find competitors, 
+Twitter discussions, and academic papers on the topic"
+```
+
+### Crypto Whale Alerts
+```
+"Track large BTC movements and correlate with Twitter activity"
+```
 
 ## AIsa vs bird
 

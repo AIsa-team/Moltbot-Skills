@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-AIsa API Client - Unified API access for AI agents.
+OpenClaw Starter Kit - AIsa API Client
+Powered by AIsa (https://aisa.one)
+
+Unified API access for autonomous agents.
 
 Usage:
     python aisa_client.py twitter user-info --username <username>
@@ -26,9 +29,10 @@ from typing import Any, Dict, Optional
 
 
 class AIsaClient:
-    """AIsa API Client for unified access to AI-native data sources."""
+    """OpenClaw Starter Kit - AIsa API Client for unified access to AI-native data sources."""
     
     BASE_URL = "https://api.aisa.one/apis/v1"
+    LLM_BASE_URL = "https://api.aisa.one/v1"
     
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the client with an API key."""
@@ -57,7 +61,7 @@ class AIsaClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "AIsa-Moltbot-Skill/1.0"
+            "User-Agent": "OpenClaw-Starter-Kit/1.0"
         }
         
         request_data = None
@@ -189,9 +193,34 @@ class AIsaClient:
     
     def news(self, ticker: str, count: int = 10) -> Dict[str, Any]:
         """Get company news by stock ticker."""
-        return self._request("GET", "/financial/news/company", params={"ticker": ticker, "limit": count})
+        return self._request("GET", "/financial/news", params={"ticker": ticker, "limit": count})
     
     # ==================== LLM APIs ====================
+    
+    def _llm_request(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Make an HTTP request to the AIsa LLM API (different base URL)."""
+        url = f"{self.LLM_BASE_URL}{endpoint}"
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "OpenClaw-Starter-Kit/1.0"
+        }
+        
+        request_data = json.dumps(data).encode("utf-8")
+        req = urllib.request.Request(url, data=request_data, headers=headers, method="POST")
+        
+        try:
+            with urllib.request.urlopen(req, timeout=120) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8")
+            try:
+                return json.loads(error_body)
+            except json.JSONDecodeError:
+                return {"success": False, "error": {"code": str(e.code), "message": error_body}}
+        except urllib.error.URLError as e:
+            return {"success": False, "error": {"code": "NETWORK_ERROR", "message": str(e.reason)}}
     
     def llm_complete(self, model: str, prompt: str, **kwargs) -> Dict[str, Any]:
         """Generate a completion using the specified LLM model."""
@@ -200,7 +229,7 @@ class AIsaClient:
             "messages": [{"role": "user", "content": prompt}],
             **kwargs
         }
-        return self._request("POST", "/llm/chat/completions", data=data)
+        return self._llm_request("/chat/completions", data)
     
     def llm_chat(self, model: str, messages: list, **kwargs) -> Dict[str, Any]:
         """Perform a chat completion with message history."""
@@ -209,13 +238,13 @@ class AIsaClient:
             "messages": messages,
             **kwargs
         }
-        return self._request("POST", "/llm/chat/completions", data=data)
+        return self._llm_request("/chat/completions", data)
 
 
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="AIsa API Client - Unified API access for AI agents",
+        description="OpenClaw Starter Kit - Unified API access for autonomous agents (Powered by AIsa)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
