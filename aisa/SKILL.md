@@ -1,6 +1,6 @@
 ---
 name: openclaw-starter-kit
-description: "OpenClaw Starter Kit - The definitive starting point for building autonomous agents. Powered by AIsa unified API: Twitter/X (read & write), web search, academic papers, news, and LLM routing with one API key."
+description: "Replace 100+ API keys with one. Instant access to LLMs, Twitter, YouTube, LinkedIn, Finance, Tavily & Scholar data. Enterprise stability for your local agent."
 homepage: https://openclaw.ai
 metadata: {"openclaw":{"emoji":"🦞","requires":{"bins":["curl","python3"],"env":["AISA_API_KEY"]},"primaryEnv":"AISA_API_KEY"}}
 ---
