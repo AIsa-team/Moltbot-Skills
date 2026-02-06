@@ -55,10 +55,10 @@ Replace 100+ API keys with one. Access GPT-4, Claude-3, Gemini, Grok, and more t
 
 | Family | Developer | Example Models |
 |--------|-----------|----------------|
-| GPT | OpenAI | gpt-4.1, gpt-4o, gpt-4o-mini, o1, o1-mini, o3-mini |
-| Claude | Anthropic | claude-3-5-sonnet, claude-3-opus, claude-3-sonnet |
-| Gemini | Google | gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash |
-| Grok | xAI | grok-2, grok-beta |
+| GPT | OpenAI | gpt-5.2, gpt-5, gpt-5-mini, gpt-4.1, gpt-4.1-mini, gpt-4o, gpt-4o-mini |
+| Claude | Anthropic | claude-sonnet-4-5, claude-opus-4-1, claude-opus-4, claude-sonnet-4, claude-haiku-4-5 |
+| Gemini | Google | gemini-2.5-pro, gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-pro-preview |
+| Grok | xAI | grok-4, grok-3 |
 | Llama | Meta | llama-3.1-405b, llama-3.1-70b, llama-3.1-8b |
 | Mistral | Mistral AI | mistral-large, mistral-medium, mixtral-8x7b |
 
@@ -99,7 +99,7 @@ curl -X POST "https://api.aisa.one/v1/chat/completions" \
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `model` | string | Yes | Model identifier (e.g., `gpt-4.1`, `claude-3-sonnet`) |
+| `model` | string | Yes | Model identifier (e.g., `gpt-4.1`, `claude-sonnet-4-5`) |
 | `messages` | array | Yes | Conversation messages |
 | `temperature` | number | No | Randomness (0-2, default: 1) |
 | `max_tokens` | integer | No | Maximum response tokens |
@@ -152,7 +152,7 @@ curl -X POST "https://api.aisa.one/v1/chat/completions" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-3-sonnet",
+    "model": "claude-sonnet-4-5",
     "messages": [{"role": "user", "content": "Write a poem about AI."}],
     "stream": true
   }'
@@ -223,11 +223,11 @@ curl -X POST "https://api.aisa.one/v1/chat/completions" \
 For Gemini models, you can also use the native format:
 
 ```
-POST https://api.aisa.one/v1/models/{model}:generateContent
+POST https://api.aisa.one/v1/models/gemini-2.5-flash:generateContent
 ```
 
 ```bash
-curl -X POST "https://api.aisa.one/v1/models/gemini-2.0-flash:generateContent" \
+curl -X POST "https://api.aisa.one/v1/models/gemini-2.5-flash:generateContent" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -257,7 +257,7 @@ No installation required - uses standard library only.
 python3 {baseDir}/scripts/llm_router_client.py chat --model gpt-4.1 --message "Hello, world!"
 
 # With system prompt
-python3 {baseDir}/scripts/llm_router_client.py chat --model claude-3-sonnet --system "You are a poet" --message "Write about the moon"
+python3 {baseDir}/scripts/llm_router_client.py chat --model claude-sonnet-4-5 --system "You are a poet" --message "Write about the moon"
 
 # Streaming
 python3 {baseDir}/scripts/llm_router_client.py chat --model gpt-4o --message "Tell me a story" --stream
@@ -272,7 +272,7 @@ python3 {baseDir}/scripts/llm_router_client.py vision --model gpt-4o --image "ht
 python3 {baseDir}/scripts/llm_router_client.py models
 
 # Compare models
-python3 {baseDir}/scripts/llm_router_client.py compare --models "gpt-4.1,claude-3-sonnet,gemini-2.0-flash" --message "What is 2+2?"
+python3 {baseDir}/scripts/llm_router_client.py compare --models "gpt-4.1,claude-sonnet-4-5,gemini-2.5-flash" --message "What is 2+2?"
 ```
 
 ### Python SDK Usage
@@ -316,7 +316,7 @@ response = client.vision(
 
 # Compare models
 results = client.compare_models(
-    models=["gpt-4.1", "claude-3-sonnet", "gemini-2.0-flash"],
+    models=["gpt-4.1", "claude-sonnet-4-5", "gemini-2.5-flash"],
     message="Explain quantum computing"
 )
 for model, result in results.items():
@@ -347,7 +347,7 @@ Automatic fallback on failure:
 
 ```python
 def chat_with_fallback(message: str) -> str:
-    models = ["gpt-4.1", "claude-3-sonnet", "gemini-2.0-flash"]
+    models = ["gpt-4.1", "claude-sonnet-4-5", "gemini-2.5-flash"]
     
     for model in models:
         try:
@@ -364,7 +364,7 @@ Compare model outputs:
 
 ```python
 results = client.compare_models(
-    models=["gpt-4.1", "claude-3-opus"],
+    models=["gpt-4.1", "claude-opus-4-1"],
     message="Analyze this quarterly report..."
 )
 
@@ -380,8 +380,8 @@ Choose the best model for each task:
 ```python
 MODEL_MAP = {
     "code": "gpt-4.1",
-    "creative": "claude-3-opus",
-    "fast": "gemini-2.0-flash",
+    "creative": "claude-opus-4-1",
+    "fast": "gemini-2.5-flash",
     "vision": "gpt-4o",
     "reasoning": "o1",
     "open_source": "llama-3.1-70b"
@@ -449,7 +449,7 @@ Token-based pricing varies by model. Check [marketplace.aisa.one/pricing](https:
 |--------------|------------------|
 | GPT-4.1 / GPT-4o | ~$0.01 / 1K tokens |
 | Claude-3-Sonnet | ~$0.01 / 1K tokens |
-| Gemini-2.0-Flash | ~$0.001 / 1K tokens |
+| Gemini-2.5-Flash | ~$0.001 / 1K tokens |
 | Grok-2 | ~$0.01 / 1K tokens |
 | Llama-3.1-70b | ~$0.002 / 1K tokens |
 | Mistral-Large | ~$0.008 / 1K tokens |

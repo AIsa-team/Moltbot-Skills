@@ -12,12 +12,18 @@ Usage:
 """
 
 import argparse
+import io
 import json
 import os
 import sys
 import urllib.request
 import urllib.error
 from typing import Any, Dict, Generator, List, Optional
+
+# Ensure UTF-8 output on Windows
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 
 class LLMRouterClient:
@@ -27,10 +33,10 @@ class LLMRouterClient:
     
     # Popular models for reference (check marketplace.aisa.one/pricing for full list)
     SUPPORTED_MODELS = {
-        "openai": ["gpt-4.1", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"],
-        "anthropic": ["claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
-        "google": ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
-        "xai": ["grok-2", "grok-beta"],
+        "openai": ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "gpt-oss-120b"],
+        "anthropic": ["claude-sonnet-4-5-20250929", "claude-opus-4-1-20250805", "claude-opus-4-20250514", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "claude-3-7-sonnet-20250219"],
+        "google": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-pro-preview"],
+        "xai": ["grok-4", "grok-3"],
         "meta": ["llama-3.1-405b", "llama-3.1-70b", "llama-3.1-8b"],
         "mistral": ["mistral-large", "mistral-medium", "mixtral-8x7b"],
     }
@@ -115,7 +121,7 @@ class LLMRouterClient:
         Create a chat completion.
         
         Args:
-            model: Model identifier (e.g., gpt-4.1, claude-3-sonnet)
+            model: Model identifier (e.g., gpt-4.1, claude-sonnet-4-5)
             messages: List of message dicts with 'role' and 'content'
             temperature: Sampling temperature (0-2)
             max_tokens: Maximum tokens to generate
@@ -253,10 +259,10 @@ def main():
         epilog="""
 Examples:
     %(prog)s chat --model gpt-4.1 --message "Hello!"
-    %(prog)s chat --model claude-3-sonnet --message "Write a poem" --stream
+    %(prog)s chat --model claude-sonnet-4-5 --message "Write a poem" --stream
     %(prog)s chat --model gpt-4 --system "You are a pirate" --message "Greet me"
     %(prog)s vision --model gpt-4o --image "https://example.com/img.jpg" --prompt "Describe this"
-    %(prog)s compare --models "gpt-4.1,claude-3-sonnet" --message "Explain AI"
+    %(prog)s compare --models "gpt-4.1,claude-sonnet-4-5" --message "Explain AI"
     %(prog)s models
         """
     )
