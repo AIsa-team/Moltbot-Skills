@@ -2,7 +2,7 @@
 
 **Powered by AIsa**
 
-Complete API documentation based on [docs.aisa.one](https://docs.aisa.one/reference/introduction).
+Complete API documentation based on [docs.aisa.one](https://docs.aisa.one/reference/).
 
 ## Base URL
 
@@ -194,5 +194,5 @@ OpenAI-compatible chat completions.
 ## Full Documentation
 
 For complete API documentation including all endpoints:
-- [AIsa API Reference](https://docs.aisa.one/reference/introduction)
+- [AIsa API Reference](https://docs.aisa.one/reference/)
 - [Documentation Index](https://docs.aisa.one/llms.txt)
