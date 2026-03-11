@@ -122,25 +122,26 @@ curl "https://api.aisa.one/apis/v1/twitter/trends?woeid=1" \
 
 ### Twitter/X - Write (Requires Login)
 
-> **Security Notice**: Credentials are read from environment variables to prevent exposure in shell history, process lists, or logs.
+> **Warning**: Write operations require logging in first to get `login_cookies`. All write endpoints also require a `proxy` parameter.
 
 ```bash
-# Set credentials via environment variables
-export TWITTER_EMAIL="your-email"
-export TWITTER_PASSWORD="your-password"
-export TWITTER_PROXY="http://ip:port"
-
-# Step 1: Login
-curl -X POST "https://api.aisa.one/apis/v1/twitter/user_login_v3" \
+# Step 1: Login (returns login_cookies)
+curl -X POST "https://api.aisa.one/apis/v1/twitter/user_login_v2" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"user_name\":\"myaccount\",\"email\":\"$TWITTER_EMAIL\",\"password\":\"$TWITTER_PASSWORD\",\"proxy\":\"$TWITTER_PROXY\"}"
+  -d '{
+    "user_name": "myaccount",
+    "email": "me@example.com",
+    "password": "xxx",
+    "proxy": "http://user:pass@ip:port",
+    "totp_secret": "optional-2fa-secret"
+  }'
 
-# Step 2: Post tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/send_tweet_v3" \
+# Step 2: Post tweet (use login_cookies from login response)
+curl -X POST "https://api.aisa.one/apis/v1/twitter/create_tweet_v2" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"user_name":"myaccount","text":"Hello from OpenClaw Starter Kit!"}'
+  -d '{"login_cookies": "<cookies-from-login>", "tweet_text": "Hello from OpenClaw!", "proxy": "http://user:pass@ip:port"}'
 ```
 
 ### Web & Scholar Search
@@ -171,16 +172,21 @@ curl -X POST "https://api.aisa.one/v1/chat/completions" \
 ## Python Client Reference
 
 ```bash
-# Twitter
+# Twitter Read
 python scripts/aisa_client.py twitter user-info --username <username>
+python scripts/aisa_client.py twitter user-about --username <username>
 python scripts/aisa_client.py twitter tweets --username <username>
+python scripts/aisa_client.py twitter mentions --username <username>
+python scripts/aisa_client.py twitter followers --username <username>
 python scripts/aisa_client.py twitter search --query <query>
 python scripts/aisa_client.py twitter trends
+python scripts/aisa_client.py twitter detail --tweet-ids <ids>
+python scripts/aisa_client.py twitter replies --tweet-id <id>
 
-# Twitter Write (login required - credentials from env vars TWITTER_EMAIL, TWITTER_PASSWORD, TWITTER_PROXY)
-python scripts/aisa_client.py twitter login --username <u>
-python scripts/aisa_client.py twitter post --username <u> --text "Hello!"
-python scripts/aisa_client.py twitter like --username <u> --tweet-id <id>
+# Twitter Write (login required, returns login_cookies)
+python scripts/aisa_client.py twitter login --username <u> --email <e> --password <p> --proxy <proxy>
+python scripts/aisa_client.py twitter post --cookies "<cookies>" --text "Hello!" --proxy <proxy>
+python scripts/aisa_client.py twitter like --cookies "<cookies>" --tweet-id <id> --proxy <proxy>
 
 # Search
 python scripts/aisa_client.py search web --query <query>

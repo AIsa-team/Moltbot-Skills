@@ -86,33 +86,34 @@ curl "https://api.aisa.one/apis/v1/twitter/trends?woeid=1" \
 
 ### Twitter/X Post (Write)
 
-> **Security Notice**: Posting requires account login. Credentials are read from environment variables to avoid exposure in shell history or logs. Set `TWITTER_EMAIL`, `TWITTER_PASSWORD`, and `TWITTER_PROXY` before using write operations.
-
-> **Warning**: Use responsibly to avoid rate limits or account suspension.
+> **Warning**: Write operations require logging in first to get `login_cookies`. All write endpoints also require a `proxy` parameter. Use responsibly to avoid rate limits or account suspension.
 
 ```bash
-# Set credentials via environment variables (never pass as CLI arguments)
-export TWITTER_EMAIL="your-email"
-export TWITTER_PASSWORD="your-password"
-export TWITTER_PROXY="http://ip:port"
-
-# Step 1: Login first (async, check status after)
-curl -X POST "https://api.aisa.one/apis/v1/twitter/user_login_v3" \
+# Step 1: Login (returns login_cookies for subsequent calls)
+curl -X POST "https://api.aisa.one/apis/v1/twitter/user_login_v2" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"user_name\":\"myaccount\",\"email\":\"$TWITTER_EMAIL\",\"password\":\"$TWITTER_PASSWORD\",\"proxy\":\"$TWITTER_PROXY\"}"
+  -d '{
+    "user_name": "myaccount",
+    "email": "me@example.com",
+    "password": "xxx",
+    "proxy": "http://user:pass@ip:port",
+    "totp_secret": "optional-2fa-secret"
+  }'
 
-# Step 2: Send tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/send_tweet_v3" \
+# Step 2: Use login_cookies from login response for all write operations
+
+# Create a tweet
+curl -X POST "https://api.aisa.one/apis/v1/twitter/create_tweet_v2" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"user_name":"myaccount","text":"Hello from OpenClaw!"}'
+  -d '{"login_cookies": "<cookies-from-login>", "tweet_text": "Hello from OpenClaw!", "proxy": "http://user:pass@ip:port"}'
 
-# Like / Retweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/like_tweet_v3" \
+# Like a tweet
+curl -X POST "https://api.aisa.one/apis/v1/twitter/like_tweet_v2" \
   -H "Authorization: Bearer $AISA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"user_name":"myaccount","tweet_id":"1234567890"}'
+  -d '{"login_cookies": "<cookies>", "tweet_id": "1234567890", "proxy": "http://user:pass@ip:port"}'
 ```
 
 ### Search (Web + Academic)
@@ -155,13 +156,23 @@ Supported models: GPT-4, Claude-3, Gemini, Qwen, Deepseek, Grok, and more.
 ```bash
 # Twitter Read
 python3 {baseDir}/scripts/aisa_client.py twitter user-info --username elonmusk
+python3 {baseDir}/scripts/aisa_client.py twitter user-about --username elonmusk
+python3 {baseDir}/scripts/aisa_client.py twitter tweets --username elonmusk
+python3 {baseDir}/scripts/aisa_client.py twitter mentions --username elonmusk
+python3 {baseDir}/scripts/aisa_client.py twitter followers --username elonmusk
+python3 {baseDir}/scripts/aisa_client.py twitter followings --username elonmusk
 python3 {baseDir}/scripts/aisa_client.py twitter search --query "AI agents"
+python3 {baseDir}/scripts/aisa_client.py twitter user-search --query "AI researcher"
 python3 {baseDir}/scripts/aisa_client.py twitter trends --woeid 1
+python3 {baseDir}/scripts/aisa_client.py twitter detail --tweet-ids 1895096451033985024
+python3 {baseDir}/scripts/aisa_client.py twitter replies --tweet-id 1895096451033985024
+python3 {baseDir}/scripts/aisa_client.py twitter community-info --community-id 1708485837274263614
 
-# Twitter Write (requires login first, credentials from env vars)
-python3 {baseDir}/scripts/aisa_client.py twitter login --username myaccount
-python3 {baseDir}/scripts/aisa_client.py twitter post --username myaccount --text "Hello!"
-python3 {baseDir}/scripts/aisa_client.py twitter like --username myaccount --tweet-id 1234567890
+# Twitter Write (requires login first, returns login_cookies)
+python3 {baseDir}/scripts/aisa_client.py twitter login --username myaccount --email me@example.com --password xxx --proxy "http://user:pass@ip:port"
+python3 {baseDir}/scripts/aisa_client.py twitter post --cookies "<login_cookies>" --text "Hello!" --proxy "http://user:pass@ip:port"
+python3 {baseDir}/scripts/aisa_client.py twitter like --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
+python3 {baseDir}/scripts/aisa_client.py twitter retweet --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
 
 # Search
 python3 {baseDir}/scripts/aisa_client.py search web --query "latest AI news"

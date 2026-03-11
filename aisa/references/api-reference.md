@@ -22,56 +22,51 @@ Authorization: Bearer YOUR_AISA_API_KEY
 
 ## Twitter/X APIs
 
-### GET /twitter/user/info
+### Read Endpoints (GET)
 
-Get user information by username.
+| Endpoint | Description | Key Params |
+|----------|-------------|------------|
+| `/twitter/user/info` | Get user profile | `userName` |
+| `/twitter/user_about` | Get user profile about | `userName` |
+| `/twitter/user/batch_info_by_ids` | Batch get users by IDs | `userIds` |
+| `/twitter/user/last_tweets` | Get user's recent tweets | `userName`, `cursor` |
+| `/twitter/user/mentions` | Get user mentions | `userName`, `cursor` |
+| `/twitter/user/followers` | Get user followers | `userName`, `cursor` |
+| `/twitter/user/followings` | Get user followings | `userName`, `cursor` |
+| `/twitter/user/verifiedFollowers` | Get verified followers | `user_id`, `cursor` |
+| `/twitter/user/check_follow_relationship` | Check follow relationship | `source_user_name`, `target_user_name` |
+| `/twitter/user/search` | Search users by keyword | `query`, `cursor` |
+| `/twitter/tweet/advanced_search` | Advanced tweet search | `query`, `queryType` (Latest/Top), `cursor` |
+| `/twitter/tweets` | Get tweets by IDs | `tweet_ids` (comma-separated) |
+| `/twitter/tweet/replies` | Get tweet replies | `tweetId`, `cursor` |
+| `/twitter/tweet/quotes` | Get tweet quotes | `tweetId`, `cursor` |
+| `/twitter/tweet/retweeters` | Get tweet retweeters | `tweetId`, `cursor` |
+| `/twitter/tweet/thread_context` | Get tweet thread context | `tweetId`, `cursor` |
+| `/twitter/article` | Get article by tweet | `tweet_id` |
+| `/twitter/trends` | Get trending topics | `woeid` (1=worldwide) |
+| `/twitter/list/members` | Get list members | `list_id`, `cursor` |
+| `/twitter/list/followers` | Get list followers | `list_id`, `cursor` |
+| `/twitter/community/info` | Get community info | `community_id` |
+| `/twitter/community/members` | Get community members | `community_id`, `cursor` |
+| `/twitter/community/moderators` | Get community moderators | `community_id`, `cursor` |
+| `/twitter/community/tweets` | Get community tweets | `community_id`, `cursor` |
+| `/twitter/community/get_tweets_from_all_community` | Search all community tweets | `query`, `cursor` |
+| `/twitter/spaces/detail` | Get Space detail | `space_id` |
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| userName | string | Yes | Twitter username (without @) |
+### Write Endpoints (POST)
 
-### GET /twitter/tweet/advanced_search
-
-Advanced search for tweets.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| query | string | Yes | Search query |
-| queryType | string | Yes | "Latest" or "Top" |
-| cursor | string | No | Pagination cursor |
-
-### GET /twitter/user/last_tweets
-
-Get user's recent tweets.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| userName | string | Yes | Twitter username |
-
-### GET /twitter/tweets
-
-Get tweets by IDs.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| tweet_ids | string | Yes | Comma-separated tweet IDs |
-
-### GET /twitter/trends
-
-Get trending topics by WOEID.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| woeid | integer | Yes | WOEID (1 = worldwide) |
-| count | integer | No | Number of trends (default 30) |
-
-### GET /twitter/user/search
-
-Search for users by keyword.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| query | string | Yes | Search keyword |
+| Endpoint | Description | Key Params |
+|----------|-------------|------------|
+| `/twitter/user_login_v2` | Login to account | `user_name`, `email`, `password`, `proxy`, `totp_secret` |
+| `/twitter/create_tweet_v2` | Create a tweet | `login_cookies`, `tweet_text`, `proxy`, `reply_to_tweet_id`?, `media_ids`? |
+| `/twitter/upload_media_v2` | Upload media (multipart) | `file`, `login_cookies`, `proxy` |
+| `/twitter/like_tweet_v2` | Like a tweet | `login_cookies`, `tweet_id`, `proxy` |
+| `/twitter/unlike_tweet_v2` | Unlike a tweet | `login_cookies`, `tweet_id`, `proxy` |
+| `/twitter/retweet_tweet_v2` | Retweet | `login_cookies`, `tweet_id`, `proxy` |
+| `/twitter/delete_tweet_v2` | Delete a tweet | `login_cookies`, `tweet_id`, `proxy` |
+| `/twitter/follow_user_v2` | Follow a user | `login_cookies`, `user_id`, `proxy` |
+| `/twitter/unfollow_user_v2` | Unfollow a user | `login_cookies`, `user_id`, `proxy` |
+| `/twitter/send_dm_to_user` | Send a direct message | `login_cookies`, `user_id`, `text`, `proxy` |
 
 ---
 

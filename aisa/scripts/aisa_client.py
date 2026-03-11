@@ -86,99 +86,185 @@ class AIsaClient:
         except urllib.error.URLError as e:
             return {"success": False, "error": {"code": "NETWORK_ERROR", "message": str(e.reason)}}
     
-    # ==================== Twitter APIs ====================
-    
+    # ==================== Twitter Read APIs ====================
+
     def twitter_user_info(self, username: str) -> Dict[str, Any]:
         """Get Twitter user information by username."""
         return self._request("GET", "/twitter/user/info", params={"userName": username})
-    
-    def twitter_user_tweets(self, username: str, count: int = 20) -> Dict[str, Any]:
-        """Get tweets from a specific user."""
-        return self._request("GET", "/twitter/user/last_tweets", params={"userName": username})
-    
-    def twitter_search(self, query: str, query_type: str = "Latest") -> Dict[str, Any]:
-        """Search for tweets matching a query (Advanced Search)."""
-        return self._request("GET", "/twitter/tweet/advanced_search", params={
-            "query": query,
-            "queryType": query_type  # "Latest" or "Top"
+
+    def twitter_user_about(self, username: str) -> Dict[str, Any]:
+        """Get user profile about (account country, verification, username changes)."""
+        return self._request("GET", "/twitter/user_about", params={"userName": username})
+
+    def twitter_batch_user_info(self, user_ids: str) -> Dict[str, Any]:
+        """Batch get user info by comma-separated user IDs."""
+        return self._request("GET", "/twitter/user/batch_info_by_ids", params={"userIds": user_ids})
+
+    def twitter_user_tweets(self, username: str, cursor: str = None) -> Dict[str, Any]:
+        """Get latest tweets from a specific user."""
+        return self._request("GET", "/twitter/user/last_tweets", params={"userName": username, "cursor": cursor})
+
+    def twitter_user_mentions(self, username: str, cursor: str = None) -> Dict[str, Any]:
+        """Get mentions of a user."""
+        return self._request("GET", "/twitter/user/mentions", params={"userName": username, "cursor": cursor})
+
+    def twitter_followers(self, username: str, cursor: str = None) -> Dict[str, Any]:
+        """Get user followers."""
+        return self._request("GET", "/twitter/user/followers", params={"userName": username, "cursor": cursor})
+
+    def twitter_followings(self, username: str, cursor: str = None) -> Dict[str, Any]:
+        """Get user followings."""
+        return self._request("GET", "/twitter/user/followings", params={"userName": username, "cursor": cursor})
+
+    def twitter_verified_followers(self, user_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get verified followers of a user (requires user_id, not username)."""
+        return self._request("GET", "/twitter/user/verifiedFollowers", params={"user_id": user_id, "cursor": cursor})
+
+    def twitter_check_follow(self, source: str, target: str) -> Dict[str, Any]:
+        """Check follow relationship between two users."""
+        return self._request("GET", "/twitter/user/check_follow_relationship", params={
+            "source_user_name": source, "target_user_name": target
         })
-    
+
+    def twitter_user_search(self, keyword: str, cursor: str = None) -> Dict[str, Any]:
+        """Search for Twitter users by keyword."""
+        return self._request("GET", "/twitter/user/search", params={"query": keyword, "cursor": cursor})
+
+    def twitter_search(self, query: str, query_type: str = "Latest", cursor: str = None) -> Dict[str, Any]:
+        """Search for tweets (Advanced Search)."""
+        return self._request("GET", "/twitter/tweet/advanced_search", params={
+            "query": query, "queryType": query_type, "cursor": cursor
+        })
+
     def twitter_tweet_detail(self, tweet_ids: str) -> Dict[str, Any]:
         """Get detailed information about tweets by IDs (comma-separated)."""
         return self._request("GET", "/twitter/tweets", params={"tweet_ids": tweet_ids})
-    
+
+    def twitter_tweet_replies(self, tweet_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get replies to a tweet."""
+        return self._request("GET", "/twitter/tweet/replies", params={"tweetId": tweet_id, "cursor": cursor})
+
+    def twitter_tweet_quotes(self, tweet_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get quotes of a tweet."""
+        return self._request("GET", "/twitter/tweet/quotes", params={"tweetId": tweet_id, "cursor": cursor})
+
+    def twitter_tweet_retweeters(self, tweet_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get retweeters of a tweet."""
+        return self._request("GET", "/twitter/tweet/retweeters", params={"tweetId": tweet_id, "cursor": cursor})
+
+    def twitter_tweet_thread(self, tweet_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get the full thread context of a tweet."""
+        return self._request("GET", "/twitter/tweet/thread_context", params={"tweetId": tweet_id, "cursor": cursor})
+
+    def twitter_article(self, tweet_id: str) -> Dict[str, Any]:
+        """Get article content by tweet ID."""
+        return self._request("GET", "/twitter/article", params={"tweet_id": tweet_id})
+
     def twitter_trends(self, woeid: int = 1) -> Dict[str, Any]:
         """Get current Twitter trending topics by WOEID (1 = worldwide)."""
         return self._request("GET", "/twitter/trends", params={"woeid": woeid})
-    
-    def twitter_user_search(self, keyword: str) -> Dict[str, Any]:
-        """Search for Twitter users by keyword."""
-        return self._request("GET", "/twitter/user/search", params={"query": keyword})
-    
-    # ==================== Twitter Post APIs (V3 - requires login) ====================
 
-    def twitter_login(self, username: str, email: str = None, password: str = None, proxy: str = None, totp_code: str = None) -> Dict[str, Any]:
-        """Login to Twitter account (V3). Required before posting.
+    def twitter_list_members(self, list_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get members of a Twitter list."""
+        return self._request("GET", "/twitter/list/members", params={"list_id": list_id, "cursor": cursor})
 
-        Credentials are read from environment variables for security:
-          - TWITTER_EMAIL: Account email
-          - TWITTER_PASSWORD: Account password
-          - TWITTER_PROXY: Proxy URL
-        Parameters can override env vars if provided directly.
+    def twitter_list_followers(self, list_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get followers of a Twitter list."""
+        return self._request("GET", "/twitter/list/followers", params={"list_id": list_id, "cursor": cursor})
+
+    def twitter_community_info(self, community_id: str) -> Dict[str, Any]:
+        """Get community info by ID."""
+        return self._request("GET", "/twitter/community/info", params={"community_id": community_id})
+
+    def twitter_community_members(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get community members."""
+        return self._request("GET", "/twitter/community/members", params={"community_id": community_id, "cursor": cursor})
+
+    def twitter_community_moderators(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get community moderators."""
+        return self._request("GET", "/twitter/community/moderators", params={"community_id": community_id, "cursor": cursor})
+
+    def twitter_community_tweets(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
+        """Get community tweets."""
+        return self._request("GET", "/twitter/community/tweets", params={"community_id": community_id, "cursor": cursor})
+
+    def twitter_community_search(self, query: str, cursor: str = None) -> Dict[str, Any]:
+        """Search tweets from all communities."""
+        return self._request("GET", "/twitter/community/get_tweets_from_all_community", params={"query": query, "cursor": cursor})
+
+    def twitter_space_detail(self, space_id: str) -> Dict[str, Any]:
+        """Get Space detail by ID."""
+        return self._request("GET", "/twitter/spaces/detail", params={"space_id": space_id})
+
+    # ==================== Twitter Write APIs (V2 - requires login_cookies) ====================
+
+    def twitter_login(self, username: str, email: str, password: str, proxy: str, totp_secret: str = None) -> Dict[str, Any]:
+        """Login to Twitter account. Returns login_cookies for write operations.
 
         WARNING: Credentials are sent to the AIsa API server for authentication.
         """
-        email = email or os.environ.get("TWITTER_EMAIL")
-        password = password or os.environ.get("TWITTER_PASSWORD")
-        proxy = proxy or os.environ.get("TWITTER_PROXY")
-
-        if not email:
-            raise ValueError("Twitter email is required. Set TWITTER_EMAIL environment variable.")
-        if not password:
-            raise ValueError("Twitter password is required. Set TWITTER_PASSWORD environment variable.")
-        if not proxy:
-            raise ValueError("Proxy URL is required. Set TWITTER_PROXY environment variable.")
-
         data = {
             "user_name": username,
             "email": email,
             "password": password,
             "proxy": proxy
         }
-        if totp_code:
-            data["totp_code"] = totp_code
-        return self._request("POST", "/twitter/user_login_v3", data=data)
-    
-    def twitter_get_account(self, username: str) -> Dict[str, Any]:
-        """Get logged-in account details (check login status)."""
-        return self._request("GET", "/twitter/get_my_x_account_detail_v3", params={"user_name": username})
-    
-    def twitter_send_tweet(self, username: str, text: str, media_base64: str = None, media_type: str = None, community_id: str = None) -> Dict[str, Any]:
-        """Send a tweet (requires prior login via twitter_login)."""
+        if totp_secret:
+            data["totp_secret"] = totp_secret
+        return self._request("POST", "/twitter/user_login_v2", data=data)
+
+    def twitter_create_tweet(self, login_cookies: str, text: str, proxy: str,
+                             reply_to_tweet_id: str = None) -> Dict[str, Any]:
+        """Create a tweet (requires login_cookies from twitter_login)."""
         data = {
-            "user_name": username,
-            "text": text
+            "login_cookies": login_cookies,
+            "tweet_text": text,
+            "proxy": proxy
         }
-        if media_base64:
-            data["media_data_base64"] = media_base64
-        if media_type:
-            data["media_type"] = media_type
-        if community_id:
-            data["community_id"] = community_id
-        return self._request("POST", "/twitter/send_tweet_v3", data=data)
-    
-    def twitter_like(self, username: str, tweet_id: str) -> Dict[str, Any]:
-        """Like a tweet (requires prior login)."""
-        return self._request("POST", "/twitter/like_tweet_v3", data={
-            "user_name": username,
-            "tweet_id": tweet_id
+        if reply_to_tweet_id:
+            data["reply_to_tweet_id"] = reply_to_tweet_id
+        return self._request("POST", "/twitter/create_tweet_v2", data=data)
+
+    def twitter_like(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
+        """Like a tweet."""
+        return self._request("POST", "/twitter/like_tweet_v2", data={
+            "login_cookies": login_cookies, "tweet_id": tweet_id, "proxy": proxy
         })
-    
-    def twitter_retweet(self, username: str, tweet_id: str) -> Dict[str, Any]:
-        """Retweet a tweet (requires prior login)."""
-        return self._request("POST", "/twitter/retweet_v3", data={
-            "user_name": username,
-            "tweet_id": tweet_id
+
+    def twitter_unlike(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
+        """Unlike a tweet."""
+        return self._request("POST", "/twitter/unlike_tweet_v2", data={
+            "login_cookies": login_cookies, "tweet_id": tweet_id, "proxy": proxy
+        })
+
+    def twitter_retweet(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
+        """Retweet a tweet."""
+        return self._request("POST", "/twitter/retweet_tweet_v2", data={
+            "login_cookies": login_cookies, "tweet_id": tweet_id, "proxy": proxy
+        })
+
+    def twitter_delete_tweet(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
+        """Delete a tweet."""
+        return self._request("POST", "/twitter/delete_tweet_v2", data={
+            "login_cookies": login_cookies, "tweet_id": tweet_id, "proxy": proxy
+        })
+
+    def twitter_follow(self, login_cookies: str, user_id: str, proxy: str) -> Dict[str, Any]:
+        """Follow a user."""
+        return self._request("POST", "/twitter/follow_user_v2", data={
+            "login_cookies": login_cookies, "user_id": user_id, "proxy": proxy
+        })
+
+    def twitter_unfollow(self, login_cookies: str, user_id: str, proxy: str) -> Dict[str, Any]:
+        """Unfollow a user."""
+        return self._request("POST", "/twitter/unfollow_user_v2", data={
+            "login_cookies": login_cookies, "user_id": user_id, "proxy": proxy
+        })
+
+    def twitter_send_dm(self, login_cookies: str, user_id: str, text: str, proxy: str) -> Dict[str, Any]:
+        """Send a direct message to a user."""
+        return self._request("POST", "/twitter/send_dm_to_user", data={
+            "login_cookies": login_cookies, "user_id": user_id, "text": text, "proxy": proxy
         })
     
     # ==================== Search APIs ====================
@@ -281,61 +367,141 @@ Examples:
     # Twitter commands
     twitter_parser = subparsers.add_parser("twitter", help="Twitter/X API operations")
     twitter_sub = twitter_parser.add_subparsers(dest="action", help="Twitter action")
-    
-    # twitter user-info
-    user_info = twitter_sub.add_parser("user-info", help="Get user information")
-    user_info.add_argument("--username", "-u", required=True, help="Twitter username")
-    
-    # twitter tweets
-    tweets = twitter_sub.add_parser("tweets", help="Get user's last tweets")
-    tweets.add_argument("--username", "-u", required=True, help="Twitter username")
-    
-    # twitter search
-    search = twitter_sub.add_parser("search", help="Advanced tweet search")
-    search.add_argument("--query", "-q", required=True, help="Search query")
-    search.add_argument("--type", "-t", choices=["Latest", "Top"], default="Latest", help="Query type")
-    
-    # twitter detail
-    detail = twitter_sub.add_parser("detail", help="Get tweets by IDs")
-    detail.add_argument("--tweet-ids", "-t", required=True, help="Tweet IDs (comma-separated)")
-    
-    # twitter trends
-    trends = twitter_sub.add_parser("trends", help="Get trending topics")
-    trends.add_argument("--woeid", "-w", type=int, default=1, help="WOEID (1=worldwide)")
-    
-    # twitter user-search
-    user_search = twitter_sub.add_parser("user-search", help="Search for users")
-    user_search.add_argument("--keyword", "-k", required=True, help="Search keyword")
-    
-    # twitter login (V3)
-    login = twitter_sub.add_parser("login", help="Login to Twitter account (required for posting)")
-    login.add_argument("--username", "-u", required=True, help="Twitter username")
-    login.add_argument("--email", "-e", help="Account email (or set TWITTER_EMAIL env var)")
-    login.add_argument("--password", "-p", help="Account password (or set TWITTER_PASSWORD env var)")
-    login.add_argument("--proxy", help="Proxy URL (or set TWITTER_PROXY env var)")
-    login.add_argument("--totp", help="TOTP 2FA secret (recommended)")
-    
-    # twitter account (check login status)
-    account = twitter_sub.add_parser("account", help="Check logged-in account status")
-    account.add_argument("--username", "-u", required=True, help="Twitter username")
-    
-    # twitter post (send tweet)
-    post = twitter_sub.add_parser("post", help="Send a tweet (requires login)")
-    post.add_argument("--username", "-u", required=True, help="Twitter username")
-    post.add_argument("--text", "-t", required=True, help="Tweet text content")
-    post.add_argument("--media", help="Base64 encoded media data")
-    post.add_argument("--media-type", choices=["image/jpeg", "image/png", "image/gif", "video/mp4"], help="Media MIME type")
-    post.add_argument("--community", help="Community ID to post to")
-    
-    # twitter like
-    like = twitter_sub.add_parser("like", help="Like a tweet (requires login)")
-    like.add_argument("--username", "-u", required=True, help="Twitter username")
-    like.add_argument("--tweet-id", "-t", required=True, help="Tweet ID to like")
-    
-    # twitter retweet
-    retweet = twitter_sub.add_parser("retweet", help="Retweet a tweet (requires login)")
-    retweet.add_argument("--username", "-u", required=True, help="Twitter username")
-    retweet.add_argument("--tweet-id", "-t", required=True, help="Tweet ID to retweet")
+
+    # ---- User Read Commands ----
+    p = twitter_sub.add_parser("user-info", help="Get user information")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("user-about", help="Get user profile about")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("batch-users", help="Batch get users by IDs")
+    p.add_argument("--user-ids", required=True, help="Comma-separated user IDs")
+
+    p = twitter_sub.add_parser("tweets", help="Get user's latest tweets")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("mentions", help="Get user mentions")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("followers", help="Get user followers")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("followings", help="Get user followings")
+    p.add_argument("--username", "-u", required=True)
+
+    p = twitter_sub.add_parser("verified-followers", help="Get verified followers")
+    p.add_argument("--user-id", required=True, help="User ID (not username)")
+
+    p = twitter_sub.add_parser("check-follow", help="Check follow relationship")
+    p.add_argument("--source", required=True, help="Source username")
+    p.add_argument("--target", required=True, help="Target username")
+
+    # ---- Search & Discovery ----
+    p = twitter_sub.add_parser("search", help="Advanced tweet search")
+    p.add_argument("--query", "-q", required=True)
+    p.add_argument("--type", "-t", choices=["Latest", "Top"], default="Latest")
+
+    p = twitter_sub.add_parser("user-search", help="Search for users")
+    p.add_argument("--query", "-q", required=True)
+
+    p = twitter_sub.add_parser("trends", help="Get trending topics")
+    p.add_argument("--woeid", "-w", type=int, default=1)
+
+    # ---- Tweet Detail Commands ----
+    p = twitter_sub.add_parser("detail", help="Get tweets by IDs")
+    p.add_argument("--tweet-ids", required=True, help="Comma-separated tweet IDs")
+
+    p = twitter_sub.add_parser("replies", help="Get tweet replies")
+    p.add_argument("--tweet-id", required=True)
+
+    p = twitter_sub.add_parser("quotes", help="Get tweet quotes")
+    p.add_argument("--tweet-id", required=True)
+
+    p = twitter_sub.add_parser("retweeters", help="Get tweet retweeters")
+    p.add_argument("--tweet-id", required=True)
+
+    p = twitter_sub.add_parser("thread", help="Get tweet thread context")
+    p.add_argument("--tweet-id", required=True)
+
+    p = twitter_sub.add_parser("article", help="Get article by tweet ID")
+    p.add_argument("--tweet-id", required=True)
+
+    # ---- List Commands ----
+    p = twitter_sub.add_parser("list-members", help="Get list members")
+    p.add_argument("--list-id", required=True)
+
+    p = twitter_sub.add_parser("list-followers", help="Get list followers")
+    p.add_argument("--list-id", required=True)
+
+    # ---- Community Commands ----
+    p = twitter_sub.add_parser("community-info", help="Get community info")
+    p.add_argument("--community-id", required=True)
+
+    p = twitter_sub.add_parser("community-members", help="Get community members")
+    p.add_argument("--community-id", required=True)
+
+    p = twitter_sub.add_parser("community-moderators", help="Get community moderators")
+    p.add_argument("--community-id", required=True)
+
+    p = twitter_sub.add_parser("community-tweets", help="Get community tweets")
+    p.add_argument("--community-id", required=True)
+
+    p = twitter_sub.add_parser("community-search", help="Search all community tweets")
+    p.add_argument("--query", "-q", required=True)
+
+    p = twitter_sub.add_parser("space-detail", help="Get Space detail")
+    p.add_argument("--space-id", required=True)
+
+    # ---- Write Commands (require login_cookies + proxy) ----
+    p = twitter_sub.add_parser("login", help="Login to Twitter account")
+    p.add_argument("--username", "-u", required=True)
+    p.add_argument("--email", "-e", required=True)
+    p.add_argument("--password", "-p", required=True)
+    p.add_argument("--proxy", required=True)
+    p.add_argument("--totp-secret", help="2FA TOTP secret key")
+
+    p = twitter_sub.add_parser("post", help="Create a tweet")
+    p.add_argument("--cookies", required=True, help="login_cookies from login")
+    p.add_argument("--text", "-t", required=True)
+    p.add_argument("--proxy", required=True)
+    p.add_argument("--reply-to", help="Tweet ID to reply to")
+
+    p = twitter_sub.add_parser("like", help="Like a tweet")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--tweet-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("unlike", help="Unlike a tweet")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--tweet-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("retweet", help="Retweet a tweet")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--tweet-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("delete-tweet", help="Delete a tweet")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--tweet-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("follow", help="Follow a user")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--user-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("unfollow", help="Unfollow a user")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--user-id", required=True)
+    p.add_argument("--proxy", required=True)
+
+    p = twitter_sub.add_parser("send-dm", help="Send a direct message")
+    p.add_argument("--cookies", required=True)
+    p.add_argument("--user-id", required=True)
+    p.add_argument("--text", "-t", required=True)
+    p.add_argument("--proxy", required=True)
     
     # Search commands
     search_parser = subparsers.add_parser("search", help="Search API operations")
@@ -397,33 +563,83 @@ Examples:
     
     # Execute the appropriate command
     if args.command == "twitter":
-        if args.action == "user-info":
+        act = args.action
+        # User read commands
+        if act == "user-info":
             result = client.twitter_user_info(args.username)
-        elif args.action == "tweets":
+        elif act == "user-about":
+            result = client.twitter_user_about(args.username)
+        elif act == "batch-users":
+            result = client.twitter_batch_user_info(args.user_ids)
+        elif act == "tweets":
             result = client.twitter_user_tweets(args.username)
-        elif args.action == "search":
+        elif act == "mentions":
+            result = client.twitter_user_mentions(args.username)
+        elif act == "followers":
+            result = client.twitter_followers(args.username)
+        elif act == "followings":
+            result = client.twitter_followings(args.username)
+        elif act == "verified-followers":
+            result = client.twitter_verified_followers(args.user_id)
+        elif act == "check-follow":
+            result = client.twitter_check_follow(args.source, args.target)
+        # Search & Discovery
+        elif act == "search":
             result = client.twitter_search(args.query, args.type)
-        elif args.action == "detail":
-            result = client.twitter_tweet_detail(args.tweet_ids)
-        elif args.action == "trends":
+        elif act == "user-search":
+            result = client.twitter_user_search(args.query)
+        elif act == "trends":
             result = client.twitter_trends(args.woeid)
-        elif args.action == "user-search":
-            result = client.twitter_user_search(args.keyword)
-        # V3 APIs (require login)
-        elif args.action == "login":
-            try:
-                result = client.twitter_login(args.username, args.email, args.password, args.proxy, args.totp)
-            except ValueError as e:
-                print(json.dumps({"success": False, "error": {"code": "CREDENTIAL_ERROR", "message": str(e)}}))
-                sys.exit(1)
-        elif args.action == "account":
-            result = client.twitter_get_account(args.username)
-        elif args.action == "post":
-            result = client.twitter_send_tweet(args.username, args.text, args.media, args.media_type, args.community)
-        elif args.action == "like":
-            result = client.twitter_like(args.username, args.tweet_id)
-        elif args.action == "retweet":
-            result = client.twitter_retweet(args.username, args.tweet_id)
+        # Tweet detail commands
+        elif act == "detail":
+            result = client.twitter_tweet_detail(args.tweet_ids)
+        elif act == "replies":
+            result = client.twitter_tweet_replies(args.tweet_id)
+        elif act == "quotes":
+            result = client.twitter_tweet_quotes(args.tweet_id)
+        elif act == "retweeters":
+            result = client.twitter_tweet_retweeters(args.tweet_id)
+        elif act == "thread":
+            result = client.twitter_tweet_thread(args.tweet_id)
+        elif act == "article":
+            result = client.twitter_article(args.tweet_id)
+        # List commands
+        elif act == "list-members":
+            result = client.twitter_list_members(args.list_id)
+        elif act == "list-followers":
+            result = client.twitter_list_followers(args.list_id)
+        # Community commands
+        elif act == "community-info":
+            result = client.twitter_community_info(args.community_id)
+        elif act == "community-members":
+            result = client.twitter_community_members(args.community_id)
+        elif act == "community-moderators":
+            result = client.twitter_community_moderators(args.community_id)
+        elif act == "community-tweets":
+            result = client.twitter_community_tweets(args.community_id)
+        elif act == "community-search":
+            result = client.twitter_community_search(args.query)
+        elif act == "space-detail":
+            result = client.twitter_space_detail(args.space_id)
+        # Write commands (V2 - require login_cookies + proxy)
+        elif act == "login":
+            result = client.twitter_login(args.username, args.email, args.password, args.proxy, getattr(args, "totp_secret", None))
+        elif act == "post":
+            result = client.twitter_create_tweet(args.cookies, args.text, args.proxy, getattr(args, "reply_to", None))
+        elif act == "like":
+            result = client.twitter_like(args.cookies, args.tweet_id, args.proxy)
+        elif act == "unlike":
+            result = client.twitter_unlike(args.cookies, args.tweet_id, args.proxy)
+        elif act == "retweet":
+            result = client.twitter_retweet(args.cookies, args.tweet_id, args.proxy)
+        elif act == "delete-tweet":
+            result = client.twitter_delete_tweet(args.cookies, args.tweet_id, args.proxy)
+        elif act == "follow":
+            result = client.twitter_follow(args.cookies, args.user_id, args.proxy)
+        elif act == "unfollow":
+            result = client.twitter_unfollow(args.cookies, args.user_id, args.proxy)
+        elif act == "send-dm":
+            result = client.twitter_send_dm(args.cookies, args.user_id, args.text, args.proxy)
         else:
             twitter_parser.print_help()
             sys.exit(1)
