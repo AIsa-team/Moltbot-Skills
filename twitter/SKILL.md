@@ -1,6 +1,6 @@
 ---
 name: Twitter Command Center (Search + Post)
-description: "Search X (Twitter) in real time, extract relevant posts, and publish tweets/replies instantly—perfect for social listening, engagement, and rapid content ops."
+description: "Searches and reads X (Twitter): profiles, timelines, mentions, followers, tweet search, trends, lists, communities, and Spaces. Publishes posts after the user completes OAuth in the browser. Use when the user asks about Twitter/X data, social listening, or posting without sharing account passwords."
 homepage: https://openclaw.ai
 metadata: {"openclaw":{"emoji":"🐦","requires":{"bins":["curl","python3"],"env":["AISA_API_KEY"]},"primaryEnv":"AISA_API_KEY"}}
 ---
@@ -28,9 +28,9 @@ One API key. Full Twitter intelligence.
 "Search for tweets mentioning our product and analyze sentiment"
 ```
 
-### Automated Engagement
+### Post After OAuth
 ```
-"Like and retweet posts from @OpenAI that mention GPT-5"
+"Post this to X: we shipped a new release" (authorize in browser when prompted, then post)
 ```
 
 ### Competitor Intel
@@ -168,95 +168,40 @@ curl "https://api.aisa.one/apis/v1/twitter/spaces/detail?space_id=1dRJZlbLkjexB"
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
 
-### Write Operations (Requires Login)
+### Posting (OAuth relay)
 
-> ⚠️ **Warning**: Write operations require logging in first to get `login_cookies`. All write endpoints also require a `proxy` parameter. Use responsibly to avoid rate limits or account suspension.
+Posting does **not** use cookies, passwords, or proxies. Use the AIsa OAuth relay endpoints:
+
+- `POST /apis/v1/twitter/auth_twitter` — returns an authorization URL for the user to open in a browser
+- `POST /apis/v1/twitter/post_twitter` — publishes content after the user has authorized
+
+Both relay requests send **`aisa_api_key` in the JSON body**. Do **not** rely on `Authorization: Bearer` for these two POSTs.
+
+Required / optional JSON body fields:
+
+- `auth_twitter`: `aisa_api_key` (required)
+- `post_twitter`: `aisa_api_key` (required), `content` (required), `media_ids` (optional array)
 
 ```bash
-# Step 1: Login (returns login_cookies for subsequent calls)
-curl -X POST "https://api.aisa.one/apis/v1/twitter/user_login_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
+# Request authorization URL
+curl -X POST "https://api.aisa.one/apis/v1/twitter/auth_twitter" \
   -H "Content-Type: application/json" \
-  -d '{
-    "user_name": "myaccount",
-    "email": "me@example.com",
-    "password": "xxx",
-    "proxy": "http://user:pass@ip:port",
-    "totp_secret": "optional-2fa-secret"
-  }'
+  -d "{\"aisa_api_key\":\"$AISA_API_KEY\"}"
 
-# Step 2: Use login_cookies from login response for all write operations
-
-# Create a tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/create_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
+# Publish a post (after user completes OAuth in browser)
+curl -X POST "https://api.aisa.one/apis/v1/twitter/post_twitter" \
   -H "Content-Type: application/json" \
-  -d '{
-    "login_cookies": "<cookies-from-login>",
-    "tweet_text": "Hello from OpenClaw!",
-    "proxy": "http://user:pass@ip:port"
-  }'
-
-# Reply to a tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/create_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "login_cookies": "<cookies-from-login>",
-    "tweet_text": "Great point!",
-    "reply_to_tweet_id": "1234567890",
-    "proxy": "http://user:pass@ip:port"
-  }'
-
-# Upload media (multipart/form-data)
-curl -X POST "https://api.aisa.one/apis/v1/twitter/upload_media_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -F "file=@image.jpg" \
-  -F "login_cookies=<cookies-from-login>" \
-  -F "proxy=http://user:pass@ip:port"
-
-# Like a tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/like_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "tweet_id": "1234567890", "proxy": "http://user:pass@ip:port"}'
-
-# Unlike a tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/unlike_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "tweet_id": "1234567890", "proxy": "http://user:pass@ip:port"}'
-
-# Retweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/retweet_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "tweet_id": "1234567890", "proxy": "http://user:pass@ip:port"}'
-
-# Delete a tweet
-curl -X POST "https://api.aisa.one/apis/v1/twitter/delete_tweet_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "tweet_id": "1234567890", "proxy": "http://user:pass@ip:port"}'
-
-# Follow a user
-curl -X POST "https://api.aisa.one/apis/v1/twitter/follow_user_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "user_id": "44196397", "proxy": "http://user:pass@ip:port"}'
-
-# Unfollow a user
-curl -X POST "https://api.aisa.one/apis/v1/twitter/unfollow_user_v2" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "user_id": "44196397", "proxy": "http://user:pass@ip:port"}'
-
-# Send a direct message
-curl -X POST "https://api.aisa.one/apis/v1/twitter/send_dm_to_user" \
-  -H "Authorization: Bearer $AISA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"login_cookies": "<cookies>", "user_id": "44196397", "text": "Hello!", "proxy": "http://user:pass@ip:port"}'
+  -d "{\"aisa_api_key\":\"$AISA_API_KEY\",\"content\":\"Hello from OpenClaw!\"}"
 ```
+
+## Agent Instructions (posting)
+
+When the user asks to publish to X/Twitter:
+
+1. Ensure `AISA_API_KEY` is set.
+2. Prefer `post` when the user wants to publish; if the API indicates authorization is required, run `authorize` and return the `authorization_url` (or `data.auth_url` from the raw response).
+3. Do not ask for Twitter passwords or use cookie/proxy login flows.
+4. Do not claim the post succeeded until `post` returns success.
 
 ## Python Client
 
@@ -294,16 +239,12 @@ python3 {baseDir}/scripts/twitter_client.py community-members --community-id 170
 python3 {baseDir}/scripts/twitter_client.py community-tweets --community-id 1708485837274263614
 python3 {baseDir}/scripts/twitter_client.py community-search --query "AI"
 
-# Write operations (requires login first)
-python3 {baseDir}/scripts/twitter_client.py login --username myaccount --email me@example.com --password xxx --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py post --cookies "<login_cookies>" --text "Hello!" --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py like --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py unlike --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py retweet --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py delete-tweet --cookies "<login_cookies>" --tweet-id 1234567890 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py follow --cookies "<login_cookies>" --user-id 44196397 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py unfollow --cookies "<login_cookies>" --user-id 44196397 --proxy "http://user:pass@ip:port"
-python3 {baseDir}/scripts/twitter_client.py send-dm --cookies "<login_cookies>" --user-id 44196397 --text "Hello!" --proxy "http://user:pass@ip:port"
+# OAuth posting
+python3 {baseDir}/scripts/twitter_client.py status
+python3 {baseDir}/scripts/twitter_client.py authorize
+python3 {baseDir}/scripts/twitter_client.py authorize --open-browser
+python3 {baseDir}/scripts/twitter_client.py post --text "Hello from OAuth"
+python3 {baseDir}/scripts/twitter_client.py post --text "With media" --media-id <id> --media-id <id2>
 ```
 
 ## API Endpoints Reference
@@ -339,27 +280,21 @@ python3 {baseDir}/scripts/twitter_client.py send-dm --cookies "<login_cookies>" 
 | `/twitter/community/get_tweets_from_all_community` | Search all community tweets | `query`, `cursor` |
 | `/twitter/spaces/detail` | Get Space detail | `space_id` |
 
-### Write Endpoints (POST)
+### Post Endpoints (OAuth relay, POST)
 
 | Endpoint | Description | Key Params |
 |----------|-------------|------------|
-| `/twitter/user_login_v2` | Login to account | `user_name`, `email`, `password`, `proxy`, `totp_secret` |
-| `/twitter/create_tweet_v2` | Create a tweet | `login_cookies`, `tweet_text`, `proxy`, `reply_to_tweet_id`?, `media_ids`? |
-| `/twitter/upload_media_v2` | Upload media (multipart) | `file`, `login_cookies`, `proxy` |
-| `/twitter/like_tweet_v2` | Like a tweet | `login_cookies`, `tweet_id`, `proxy` |
-| `/twitter/unlike_tweet_v2` | Unlike a tweet | `login_cookies`, `tweet_id`, `proxy` |
-| `/twitter/retweet_tweet_v2` | Retweet | `login_cookies`, `tweet_id`, `proxy` |
-| `/twitter/delete_tweet_v2` | Delete a tweet | `login_cookies`, `tweet_id`, `proxy` |
-| `/twitter/follow_user_v2` | Follow a user | `login_cookies`, `user_id`, `proxy` |
-| `/twitter/unfollow_user_v2` | Unfollow a user | `login_cookies`, `user_id`, `proxy` |
-| `/twitter/send_dm_to_user` | Send a direct message | `login_cookies`, `user_id`, `text`, `proxy` |
+| `/twitter/auth_twitter` | Get OAuth authorization URL | `aisa_api_key` |
+| `/twitter/post_twitter` | Publish a post | `aisa_api_key`, `content`, `media_ids` (optional) |
+
+Auth (relay only): JSON body field `aisa_api_key` (no `Authorization: Bearer` on these POSTs).
 
 ## Pricing
 
 | API | Cost |
 |-----|------|
 | Twitter read query | ~$0.0004 |
-| Twitter post/like/retweet | ~$0.003 |
+| Twitter OAuth post (relay) | See [AIsa pricing](https://aisa.one) / console |
 
 Every response includes `usage.cost` and `usage.credits_remaining`.
 

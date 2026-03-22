@@ -1,50 +1,35 @@
 #!/usr/bin/env python3
 """
 OpenClaw Twitter - AIsa API Client
-Twitter/X data and automation for autonomous agents.
+Twitter/X data and OAuth-based posting for autonomous agents.
 
-Usage:
+Read operations use GET with Authorization: Bearer AISA_API_KEY.
+Posting uses OAuth relay: POST /twitter/auth_twitter and /twitter/post_twitter
+OAuth relay POSTs include aisa_api_key in the JSON body (no Bearer on those POSTs).
+
+Usage (read):
     python twitter_client.py user-info --username <username>
-    python twitter_client.py user-about --username <username>
-    python twitter_client.py tweets --username <username>
-    python twitter_client.py mentions --username <username>
-    python twitter_client.py followers --username <username>
-    python twitter_client.py followings --username <username>
-    python twitter_client.py verified-followers --user-id <id>
-    python twitter_client.py check-follow --source <user> --target <user>
     python twitter_client.py search --query <query> [--type Latest|Top]
-    python twitter_client.py user-search --query <query>
-    python twitter_client.py trends [--woeid <woeid>]
-    python twitter_client.py detail --tweet-ids <ids>
-    python twitter_client.py replies --tweet-id <id>
-    python twitter_client.py quotes --tweet-id <id>
-    python twitter_client.py retweeters --tweet-id <id>
-    python twitter_client.py thread --tweet-id <id>
-    python twitter_client.py list-members --list-id <id>
-    python twitter_client.py list-followers --list-id <id>
-    python twitter_client.py community-info --community-id <id>
-    python twitter_client.py community-members --community-id <id>
-    python twitter_client.py community-tweets --community-id <id>
-    python twitter_client.py community-search --query <query>
-    python twitter_client.py login --username <u> --email <e> --password <p> --proxy <proxy>
-    python twitter_client.py post --cookies <c> --text <text> --proxy <proxy>
-    python twitter_client.py like --cookies <c> --tweet-id <id> --proxy <proxy>
-    python twitter_client.py unlike --cookies <c> --tweet-id <id> --proxy <proxy>
-    python twitter_client.py retweet --cookies <c> --tweet-id <id> --proxy <proxy>
-    python twitter_client.py delete-tweet --cookies <c> --tweet-id <id> --proxy <proxy>
-    python twitter_client.py follow --cookies <c> --user-id <id> --proxy <proxy>
-    python twitter_client.py unfollow --cookies <c> --user-id <id> --proxy <proxy>
-    python twitter_client.py send-dm --cookies <c> --user-id <id> --text <text> --proxy <proxy>
+    ...
+
+Usage (OAuth post):
+    python twitter_client.py authorize [--open-browser]
+    python twitter_client.py post --text "Hello" [--media-id <id> ...]
+    python twitter_client.py status
 """
 
 import argparse
 import json
 import os
 import sys
-import urllib.request
-import urllib.parse
 import urllib.error
-from typing import Any, Dict, Optional
+import urllib.parse
+import urllib.request
+import webbrowser
+from typing import Any, Dict, List, Optional
+
+
+DEFAULT_RELAY_TIMEOUT = 30
 
 
 class TwitterClient:
@@ -65,9 +50,9 @@ class TwitterClient:
         method: str,
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Make an HTTP request to the AIsa API."""
+        """Make an HTTP request to the AIsa API (read + legacy POST patterns)."""
         url = f"{self.BASE_URL}{endpoint}"
 
         if params:
@@ -79,7 +64,7 @@ class TwitterClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "OpenClaw-Twitter/1.0"
+            "User-Agent": "OpenClaw-Twitter/1.0",
         }
 
         request_data = None
@@ -101,6 +86,58 @@ class TwitterClient:
                 return {"success": False, "error": {"code": str(e.code), "message": error_body}}
         except urllib.error.URLError as e:
             return {"success": False, "error": {"code": "NETWORK_ERROR", "message": str(e.reason)}}
+
+    def _relay_post_json(
+        self, path: str, payload: Dict[str, Any], timeout: int
+    ) -> Dict[str, Any]:
+        """POST JSON to OAuth relay endpoints; aisa_api_key must be in payload."""
+        url = f"{self.BASE_URL}{path}"
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "OpenClaw-Twitter/1.0",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8")
+                return json.loads(raw) if raw else {"code": response.status, "msg": "ok", "data": None}
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8")
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                parsed = {"code": exc.code, "msg": body or exc.reason, "data": None}
+            return {"ok": False, "status": exc.code, "payload": parsed}
+        except urllib.error.URLError as exc:
+            return {
+                "ok": False,
+                "status": "NETWORK_ERROR",
+                "payload": {"code": 503, "msg": str(exc.reason), "data": None},
+            }
+
+    def relay_authorize(
+        self, timeout: int
+    ) -> Dict[str, Any]:
+        """Request OAuth authorization URL from AIsa relay."""
+        payload: Dict[str, Any] = {"aisa_api_key": self.api_key}
+        return self._relay_post_json("/twitter/auth_twitter", payload, timeout)
+
+    def relay_post(
+        self, text: str, media_ids: Optional[List[str]], timeout: int
+    ) -> Dict[str, Any]:
+        """Publish a post via OAuth-backed relay."""
+        payload: Dict[str, Any] = {
+            "aisa_api_key": self.api_key,
+            "content": text,
+        }
+        if media_ids:
+            payload["media_ids"] = media_ids
+        return self._relay_post_json("/twitter/post_twitter", payload, timeout)
 
     # ==================== User Read APIs ====================
 
@@ -138,10 +175,11 @@ class TwitterClient:
 
     def check_follow_relationship(self, source: str, target: str) -> Dict[str, Any]:
         """Check follow relationship between two users."""
-        return self._request("GET", "/twitter/user/check_follow_relationship", params={
-            "source_user_name": source,
-            "target_user_name": target
-        })
+        return self._request(
+            "GET",
+            "/twitter/user/check_follow_relationship",
+            params={"source_user_name": source, "target_user_name": target},
+        )
 
     def user_search(self, query: str, cursor: str = None) -> Dict[str, Any]:
         """Search for Twitter users by keyword."""
@@ -151,11 +189,11 @@ class TwitterClient:
 
     def search(self, query: str, query_type: str = "Latest", cursor: str = None) -> Dict[str, Any]:
         """Search for tweets matching a query."""
-        return self._request("GET", "/twitter/tweet/advanced_search", params={
-            "query": query,
-            "queryType": query_type,
-            "cursor": cursor
-        })
+        return self._request(
+            "GET",
+            "/twitter/tweet/advanced_search",
+            params={"query": query, "queryType": query_type, "cursor": cursor},
+        )
 
     def tweet_detail(self, tweet_ids: str) -> Dict[str, Any]:
         """Get detailed information about tweets by IDs (comma-separated)."""
@@ -201,115 +239,95 @@ class TwitterClient:
 
     def community_members(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
         """Get community members."""
-        return self._request("GET", "/twitter/community/members", params={"community_id": community_id, "cursor": cursor})
+        return self._request(
+            "GET", "/twitter/community/members", params={"community_id": community_id, "cursor": cursor}
+        )
 
     def community_moderators(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
         """Get community moderators."""
-        return self._request("GET", "/twitter/community/moderators", params={"community_id": community_id, "cursor": cursor})
+        return self._request(
+            "GET", "/twitter/community/moderators", params={"community_id": community_id, "cursor": cursor}
+        )
 
     def community_tweets(self, community_id: str, cursor: str = None) -> Dict[str, Any]:
         """Get community tweets."""
-        return self._request("GET", "/twitter/community/tweets", params={"community_id": community_id, "cursor": cursor})
+        return self._request(
+            "GET", "/twitter/community/tweets", params={"community_id": community_id, "cursor": cursor}
+        )
 
     def community_search(self, query: str, cursor: str = None) -> Dict[str, Any]:
         """Search tweets from all communities."""
-        return self._request("GET", "/twitter/community/get_tweets_from_all_community", params={"query": query, "cursor": cursor})
+        return self._request(
+            "GET",
+            "/twitter/community/get_tweets_from_all_community",
+            params={"query": query, "cursor": cursor},
+        )
 
     def space_detail(self, space_id: str) -> Dict[str, Any]:
         """Get Space detail by ID."""
         return self._request("GET", "/twitter/spaces/detail", params={"space_id": space_id})
 
-    # ==================== Write APIs (requires login_cookies) ====================
 
-    def login(self, username: str, email: str, password: str, proxy: str, totp_secret: str = None) -> Dict[str, Any]:
-        """Login to Twitter account. Returns login_cookies for write operations."""
-        data = {
-            "user_name": username,
-            "email": email,
-            "password": password,
-            "proxy": proxy
-        }
-        if totp_secret:
-            data["totp_secret"] = totp_secret
-        return self._request("POST", "/twitter/user_login_v2", data=data)
+def _relay_timeout() -> int:
+    return int(os.environ.get("TWITTER_RELAY_TIMEOUT", str(DEFAULT_RELAY_TIMEOUT)))
 
-    def create_tweet(self, login_cookies: str, text: str, proxy: str,
-                     reply_to_tweet_id: str = None, media_ids: list = None) -> Dict[str, Any]:
-        """Create a tweet."""
-        data = {
-            "login_cookies": login_cookies,
-            "tweet_text": text,
-            "proxy": proxy
-        }
-        if reply_to_tweet_id:
-            data["reply_to_tweet_id"] = reply_to_tweet_id
-        if media_ids:
-            data["media_ids"] = media_ids
-        return self._request("POST", "/twitter/create_tweet_v2", data=data)
 
-    def like(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
-        """Like a tweet."""
-        return self._request("POST", "/twitter/like_tweet_v2", data={
-            "login_cookies": login_cookies,
-            "tweet_id": tweet_id,
-            "proxy": proxy
-        })
+def command_authorize(client: TwitterClient, args: argparse.Namespace) -> None:
+    timeout = _relay_timeout()
+    result = client.relay_authorize(timeout)
 
-    def unlike(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
-        """Unlike a tweet."""
-        return self._request("POST", "/twitter/unlike_tweet_v2", data={
-            "login_cookies": login_cookies,
-            "tweet_id": tweet_id,
-            "proxy": proxy
-        })
+    if result.get("ok") is False:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        sys.exit(1)
 
-    def retweet(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
-        """Retweet a tweet."""
-        return self._request("POST", "/twitter/retweet_tweet_v2", data={
-            "login_cookies": login_cookies,
-            "tweet_id": tweet_id,
-            "proxy": proxy
-        })
+    auth_url = (result.get("data") or {}).get("auth_url")
+    output = {
+        "ok": result.get("code") == 200 and bool(auth_url),
+        "authorization_url": auth_url,
+        "raw_response": result,
+    }
+    print(json.dumps(output, indent=2, ensure_ascii=False))
 
-    def delete_tweet(self, login_cookies: str, tweet_id: str, proxy: str) -> Dict[str, Any]:
-        """Delete a tweet."""
-        return self._request("POST", "/twitter/delete_tweet_v2", data={
-            "login_cookies": login_cookies,
-            "tweet_id": tweet_id,
-            "proxy": proxy
-        })
+    if output["ok"] and args.open_browser and auth_url:
+        webbrowser.open(auth_url)
 
-    def follow_user(self, login_cookies: str, user_id: str, proxy: str) -> Dict[str, Any]:
-        """Follow a user."""
-        return self._request("POST", "/twitter/follow_user_v2", data={
-            "login_cookies": login_cookies,
-            "user_id": user_id,
-            "proxy": proxy
-        })
+    if not output["ok"]:
+        sys.exit(1)
 
-    def unfollow_user(self, login_cookies: str, user_id: str, proxy: str) -> Dict[str, Any]:
-        """Unfollow a user."""
-        return self._request("POST", "/twitter/unfollow_user_v2", data={
-            "login_cookies": login_cookies,
-            "user_id": user_id,
-            "proxy": proxy
-        })
 
-    def send_dm(self, login_cookies: str, user_id: str, text: str, proxy: str) -> Dict[str, Any]:
-        """Send a direct message to a user."""
-        return self._request("POST", "/twitter/send_dm_to_user", data={
-            "login_cookies": login_cookies,
-            "user_id": user_id,
-            "text": text,
-            "proxy": proxy
-        })
+def command_post(client: TwitterClient, args: argparse.Namespace) -> None:
+    timeout = _relay_timeout()
+    media_ids = args.media_id if getattr(args, "media_id", None) else None
+    result = client.relay_post(args.text, media_ids, timeout)
+
+    output = {
+        "ok": result.get("code") == 200,
+        "raw_response": result,
+    }
+    if result.get("ok") is False:
+        output["ok"] = False
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+    if not output["ok"]:
+        sys.exit(1)
+
+
+def command_status(client: TwitterClient, args: argparse.Namespace) -> None:
+    del args
+    response = {
+        "ok": True,
+        "base_url": TwitterClient.BASE_URL,
+        "relay_timeout_seconds": _relay_timeout(),
+        "oauth_endpoints": ["/twitter/auth_twitter", "/twitter/post_twitter"],
+        "note": "OAuth relay POSTs send aisa_api_key in JSON body (no Authorization header).",
+    }
+    print(json.dumps(response, indent=2, ensure_ascii=False))
 
 
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="OpenClaw Twitter - Twitter/X data and automation",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description="OpenClaw Twitter - Twitter/X data and OAuth posting",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Command")
@@ -423,62 +441,45 @@ def main():
     p = subparsers.add_parser("space-detail", help="Get Space detail")
     p.add_argument("--space-id", required=True)
 
-    # ---- Write Commands (require login_cookies) ----
+    # ---- OAuth posting (relay) ----
 
-    p = subparsers.add_parser("login", help="Login to Twitter account")
-    p.add_argument("--username", "-u", required=True)
-    p.add_argument("--email", "-e", required=True)
-    p.add_argument("--password", "-p", required=True)
-    p.add_argument("--proxy", required=True)
-    p.add_argument("--totp-secret", help="2FA TOTP secret key")
+    p = subparsers.add_parser("authorize", help="Request OAuth authorization URL from AIsa")
+    p.add_argument("--open-browser", action="store_true", help="Open the authorization URL")
+    p.set_defaults(_handler="authorize")
 
-    p = subparsers.add_parser("post", help="Create a tweet")
-    p.add_argument("--cookies", required=True, help="login_cookies from login")
-    p.add_argument("--text", "-t", required=True)
-    p.add_argument("--proxy", required=True)
-    p.add_argument("--reply-to", help="Tweet ID to reply to")
+    p = subparsers.add_parser("post", help="Publish a post via OAuth-backed relay")
+    p.add_argument("--text", "-t", required=True, help="Post content")
+    p.add_argument(
+        "--media-id",
+        action="append",
+        help="Media ID to attach (repeat for multiple)",
+    )
+    p.set_defaults(_handler="post")
 
-    p = subparsers.add_parser("like", help="Like a tweet")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--tweet-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("unlike", help="Unlike a tweet")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--tweet-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("retweet", help="Retweet a tweet")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--tweet-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("delete-tweet", help="Delete a tweet")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--tweet-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("follow", help="Follow a user")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--user-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("unfollow", help="Unfollow a user")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--user-id", required=True)
-    p.add_argument("--proxy", required=True)
-
-    p = subparsers.add_parser("send-dm", help="Send a direct message")
-    p.add_argument("--cookies", required=True)
-    p.add_argument("--user-id", required=True)
-    p.add_argument("--text", "-t", required=True)
-    p.add_argument("--proxy", required=True)
+    p = subparsers.add_parser("status", help="Show OAuth relay client configuration")
+    p.set_defaults(_handler="status")
 
     args = parser.parse_args()
 
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    handler = getattr(args, "_handler", None)
+
+    if handler in ("authorize", "post", "status"):
+        try:
+            client = TwitterClient()
+        except ValueError as e:
+            print(json.dumps({"success": False, "error": {"code": "AUTH_ERROR", "message": str(e)}}))
+            sys.exit(1)
+        if handler == "authorize":
+            command_authorize(client, args)
+        elif handler == "post":
+            command_post(client, args)
+        else:
+            command_status(client, args)
+        return
 
     try:
         client = TwitterClient()
@@ -489,7 +490,6 @@ def main():
     result = None
     cmd = args.command
 
-    # User read commands
     if cmd == "user-info":
         result = client.user_info(args.username)
     elif cmd == "user-about":
@@ -508,14 +508,12 @@ def main():
         result = client.verified_followers(args.user_id, getattr(args, "cursor", None))
     elif cmd == "check-follow":
         result = client.check_follow_relationship(args.source, args.target)
-    # Search & Discovery
     elif cmd == "search":
         result = client.search(args.query, args.type, getattr(args, "cursor", None))
     elif cmd == "user-search":
         result = client.user_search(args.query, getattr(args, "cursor", None))
     elif cmd == "trends":
         result = client.trends(args.woeid)
-    # Tweet detail commands
     elif cmd == "detail":
         result = client.tweet_detail(args.tweet_ids)
     elif cmd == "replies":
@@ -528,12 +526,10 @@ def main():
         result = client.tweet_thread(args.tweet_id, getattr(args, "cursor", None))
     elif cmd == "article":
         result = client.article(args.tweet_id)
-    # List commands
     elif cmd == "list-members":
         result = client.list_members(args.list_id, getattr(args, "cursor", None))
     elif cmd == "list-followers":
         result = client.list_followers(args.list_id, getattr(args, "cursor", None))
-    # Community commands
     elif cmd == "community-info":
         result = client.community_info(args.community_id)
     elif cmd == "community-members":
@@ -544,28 +540,8 @@ def main():
         result = client.community_tweets(args.community_id, getattr(args, "cursor", None))
     elif cmd == "community-search":
         result = client.community_search(args.query, getattr(args, "cursor", None))
-    # Spaces
     elif cmd == "space-detail":
         result = client.space_detail(args.space_id)
-    # Write commands
-    elif cmd == "login":
-        result = client.login(args.username, args.email, args.password, args.proxy, args.totp_secret)
-    elif cmd == "post":
-        result = client.create_tweet(args.cookies, args.text, args.proxy, args.reply_to)
-    elif cmd == "like":
-        result = client.like(args.cookies, args.tweet_id, args.proxy)
-    elif cmd == "unlike":
-        result = client.unlike(args.cookies, args.tweet_id, args.proxy)
-    elif cmd == "retweet":
-        result = client.retweet(args.cookies, args.tweet_id, args.proxy)
-    elif cmd == "delete-tweet":
-        result = client.delete_tweet(args.cookies, args.tweet_id, args.proxy)
-    elif cmd == "follow":
-        result = client.follow_user(args.cookies, args.user_id, args.proxy)
-    elif cmd == "unfollow":
-        result = client.unfollow_user(args.cookies, args.user_id, args.proxy)
-    elif cmd == "send-dm":
-        result = client.send_dm(args.cookies, args.user_id, args.text, args.proxy)
 
     if result:
         output = json.dumps(result, indent=2, ensure_ascii=False)
