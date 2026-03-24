@@ -21,15 +21,20 @@ Usage (OAuth post):
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import unicodedata
 import webbrowser
 from typing import Any, Dict, List, Optional
 
 
 DEFAULT_RELAY_TIMEOUT = 30
+TWITTER_MAX_WEIGHT = 280
+TWITTER_URL_WEIGHT = 23
+URL_PATTERN = re.compile(r"https?://\S+", re.IGNORECASE)
 
 
 class TwitterClient:
@@ -128,7 +133,11 @@ class TwitterClient:
         return self._relay_post_json("/twitter/auth_twitter", payload, timeout)
 
     def relay_post(
-        self, text: str, media_ids: Optional[List[str]], timeout: int
+        self,
+        text: str,
+        media_ids: Optional[List[str]],
+        timeout: int,
+        quote_tweet_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Publish a post via OAuth-backed relay."""
         payload: Dict[str, Any] = {
@@ -137,6 +146,8 @@ class TwitterClient:
         }
         if media_ids:
             payload["media_ids"] = media_ids
+        if quote_tweet_id:
+            payload["quote_tweet_id"] = quote_tweet_id
         return self._relay_post_json("/twitter/post_twitter", payload, timeout)
 
     # ==================== User Read APIs ====================
@@ -272,6 +283,142 @@ def _relay_timeout() -> int:
     return int(os.environ.get("TWITTER_RELAY_TIMEOUT", str(DEFAULT_RELAY_TIMEOUT)))
 
 
+def twitter_char_weight(ch: str) -> int:
+    if unicodedata.east_asian_width(ch) in {"W", "F"}:
+        return 2
+    if unicodedata.category(ch).startswith("M"):
+        return 0
+    return 1
+
+
+def twitter_weight_len(text: str) -> int:
+    total = 0
+    idx = 0
+    for matched in URL_PATTERN.finditer(text):
+        start, end = matched.span()
+        while idx < start:
+            total += twitter_char_weight(text[idx])
+            idx += 1
+        total += TWITTER_URL_WEIGHT
+        idx = end
+
+    while idx < len(text):
+        total += twitter_char_weight(text[idx])
+        idx += 1
+    return total
+
+
+def split_by_twitter_weight(text: str, max_len: int) -> List[str]:
+    parts: List[str] = []
+    current = ""
+    for ch in text:
+        candidate = current + ch
+        if twitter_weight_len(candidate) <= max_len:
+            current = candidate
+            continue
+        if current:
+            parts.append(current)
+        current = ch
+    if current:
+        parts.append(current)
+    return parts
+
+
+def split_text_for_twitter(text: str, max_len: int = TWITTER_MAX_WEIGHT) -> List[str]:
+    normalized = text.strip()
+    if not normalized:
+        return []
+    if twitter_weight_len(normalized) <= max_len:
+        return [normalized]
+
+    words = normalized.split()
+    chunks: List[str] = []
+    current = ""
+    for word in words:
+        if twitter_weight_len(word) > max_len:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.extend(split_by_twitter_weight(word, max_len))
+            continue
+
+        candidate = word if not current else f"{current} {word}"
+        if twitter_weight_len(candidate) <= max_len:
+            current = candidate
+        else:
+            chunks.append(current)
+            current = word
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def extract_tweet_id(result: Dict[str, Any]) -> Optional[str]:
+    data = result.get("data") if isinstance(result, dict) else None
+    if not isinstance(data, dict):
+        return None
+    tweet_id = data.get("tweet_id")
+    return str(tweet_id) if tweet_id else None
+
+
+def publish_chunks(
+    client: TwitterClient,
+    chunks: List[str],
+    timeout: int,
+    media_ids: Optional[List[str]] = None,
+    initial_quote_tweet_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    should_thread = len(chunks) > 1
+    previous_tweet_id = initial_quote_tweet_id
+    publish_results = []
+
+    for index, chunk in enumerate(chunks):
+        current_media_ids = media_ids if index == 0 and media_ids else None
+        result = client.relay_post(
+            chunk,
+            current_media_ids,
+            timeout,
+            quote_tweet_id=previous_tweet_id,
+        )
+        publish_results.append(
+            {
+                "index": index + 1,
+                "content": chunk,
+                "quote_tweet_id": previous_tweet_id,
+                "result": result,
+            }
+        )
+
+        if result.get("ok") is False or result.get("code") != 200:
+            return {
+                "ok": False,
+                "is_thread": should_thread,
+                "total_chunks": len(chunks),
+                "failed_at_chunk": index + 1,
+                "results": publish_results,
+            }
+
+        latest_tweet_id = extract_tweet_id(result)
+        if not latest_tweet_id:
+            return {
+                "ok": False,
+                "is_thread": should_thread,
+                "total_chunks": len(chunks),
+                "failed_at_chunk": index + 1,
+                "error": "Missing tweet_id in relay response.",
+                "results": publish_results,
+            }
+        previous_tweet_id = latest_tweet_id
+
+    return {
+        "ok": True,
+        "is_thread": should_thread,
+        "total_chunks": len(chunks),
+        "results": publish_results,
+    }
+
+
 def command_authorize(client: TwitterClient, args: argparse.Namespace) -> None:
     timeout = _relay_timeout()
     result = client.relay_authorize(timeout)
@@ -296,16 +443,19 @@ def command_authorize(client: TwitterClient, args: argparse.Namespace) -> None:
 
 
 def command_post(client: TwitterClient, args: argparse.Namespace) -> None:
+    """Split oversized content locally, then publish chunks through the relay."""
     timeout = _relay_timeout()
-    media_ids = args.media_id if getattr(args, "media_id", None) else None
-    result = client.relay_post(args.text, media_ids, timeout)
-
-    output = {
-        "ok": result.get("code") == 200,
-        "raw_response": result,
-    }
-    if result.get("ok") is False:
-        output["ok"] = False
+    chunks = split_text_for_twitter(args.text)
+    if not chunks:
+        print(json.dumps({"ok": False, "error": "Post content must not be empty."}, indent=2, ensure_ascii=False))
+        sys.exit(1)
+    output = publish_chunks(
+        client,
+        chunks,
+        timeout,
+        media_ids=getattr(args, "media_id", None),
+        initial_quote_tweet_id=getattr(args, "quote_tweet_id", None),
+    )
     print(json.dumps(output, indent=2, ensure_ascii=False))
     if not output["ok"]:
         sys.exit(1)
@@ -453,6 +603,10 @@ def main():
         "--media-id",
         action="append",
         help="Media ID to attach (repeat for multiple)",
+    )
+    p.add_argument(
+        "--quote_tweet_id",
+        help="Optional tweet ID to quote. When long content is split, later chunks quote the previously posted tweet.",
     )
     p.set_defaults(_handler="post")
 
