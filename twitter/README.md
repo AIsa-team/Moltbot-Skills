@@ -19,13 +19,14 @@ python scripts/twitter_client.py trends
 # Post: OAuth relay
 python scripts/twitter_client.py authorize --open-browser
 python scripts/twitter_client.py post --text "Hello"
-python scripts/twitter_client.py post --text "Comment on this" --type reply
+python scripts/twitter_client.py post --text "Long thread in reply mode" --type reply
+python scripts/twitter_client.py post --text "Reply to this tweet" --in-reply-to-tweet-id "1888888888888888888"
 ```
 
 ## Features
 
 - **Read**: User info, tweets, search, trends, followers, lists, communities, Spaces, etc.
-- **Post**: Browser OAuth via `POST /twitter/auth_twitter` and `POST /twitter/post_twitter` with `aisa_api_key` in the JSON body, defaulting to `type=quote` and using `type=reply` only when the user explicitly asks for reply; long posts still chain internally via `quote_tweet_id` (no cookies, no proxy, no password).
+- **Post**: Browser OAuth via `POST /twitter/auth_twitter` and `POST /twitter/post_twitter` with `aisa_api_key` in the JSON body. `type=quote|reply` controls how long posts chain into a thread, and `in_reply_to_tweet_id` can attach the thread to a specific external tweet (no cookies, no proxy, no password).
 
 
 ## Get API Key

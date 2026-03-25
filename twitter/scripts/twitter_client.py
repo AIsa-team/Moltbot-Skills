@@ -14,7 +14,7 @@ Usage (read):
 
 Usage (OAuth post):
     python twitter_client.py authorize [--open-browser]
-    python twitter_client.py post --text "Hello" [--media-id <id> ...] [--type <quote|reply>]
+    python twitter_client.py post --text "Hello" [--media-id <id> ...] [--type <quote|reply>] [--in-reply-to-tweet-id <id>]
     python twitter_client.py status
 """
 
@@ -137,7 +137,7 @@ class TwitterClient:
         text: str,
         media_ids: Optional[List[str]],
         timeout: int,
-        quote_tweet_id: Optional[str] = None,
+        parent_tweet_id: Optional[str] = None,
         post_type: str = "quote",
     ) -> Dict[str, Any]:
         """Publish a post via OAuth-backed relay."""
@@ -148,8 +148,9 @@ class TwitterClient:
         }
         if media_ids:
             payload["media_ids"] = media_ids
-        if quote_tweet_id:
-            payload["quote_tweet_id"] = quote_tweet_id
+        if parent_tweet_id:
+            parent_key = "in_reply_to_tweet_id" if post_type == "reply" else "quote_tweet_id"
+            payload[parent_key] = parent_tweet_id
         return self._relay_post_json("/twitter/post_twitter", payload, timeout)
 
     # ==================== User Read APIs ====================
@@ -369,11 +370,11 @@ def publish_chunks(
     chunks: List[str],
     timeout: int,
     media_ids: Optional[List[str]] = None,
-    initial_quote_tweet_id: Optional[str] = None,
+    initial_parent_tweet_id: Optional[str] = None,
     post_type: str = "quote",
 ) -> Dict[str, Any]:
     should_thread = len(chunks) > 1
-    previous_tweet_id = initial_quote_tweet_id
+    previous_tweet_id = initial_parent_tweet_id
     publish_results = []
 
     for index, chunk in enumerate(chunks):
@@ -382,14 +383,14 @@ def publish_chunks(
             chunk,
             current_media_ids,
             timeout,
-            quote_tweet_id=previous_tweet_id,
+            parent_tweet_id=previous_tweet_id,
             post_type=post_type,
         )
         publish_results.append(
             {
                 "index": index + 1,
                 "content": chunk,
-                "quote_tweet_id": previous_tweet_id,
+                "parent_tweet_id": previous_tweet_id,
                 "result": result,
             }
         )
@@ -458,6 +459,7 @@ def command_post(client: TwitterClient, args: argparse.Namespace) -> None:
         chunks,
         timeout,
         media_ids=getattr(args, "media_id", None),
+        initial_parent_tweet_id=getattr(args, "in_reply_to_tweet_id", None),
         post_type=args.post_type,
     )
     print(json.dumps(output, indent=2, ensure_ascii=False))
@@ -613,7 +615,11 @@ def main():
         dest="post_type",
         choices=["quote", "reply"],
         default="quote",
-        help="Post type. Defaults to quote. Only use reply when the user explicitly asks for a reply.",
+        help="Relationship used to continue multi-chunk posts. Defaults to quote; use reply for reply-style threading.",
+    )
+    p.add_argument(
+        "--in-reply-to-tweet-id",
+        help="Optional external parent tweet ID. When provided, the first chunk starts from that tweet before continuing the thread.",
     )
     p.set_defaults(_handler="post")
 

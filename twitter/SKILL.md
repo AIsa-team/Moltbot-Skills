@@ -180,7 +180,7 @@ Both relay requests send **`aisa_api_key` in the JSON body**. Do **not** rely on
 Required / optional JSON body fields:
 
 - `auth_twitter`: `aisa_api_key` (required)
-- `post_twitter`: `aisa_api_key` (required), `content` (required), `media_ids` (optional array), `type` (optional string: `quote` or `reply`), `quote_tweet_id` (optional string, internal chaining support)
+- `post_twitter`: `aisa_api_key` (required), `content` (required), `media_ids` (optional array), `type` (optional string: `quote` or `reply`), `quote_tweet_id` (optional string, quote-style chaining support), `in_reply_to_tweet_id` (optional string, reply target or reply-style chaining support)
 
 ```bash
 # Request authorization URL
@@ -200,18 +200,20 @@ When the user asks to publish to X/Twitter:
 
 1. Ensure `AISA_API_KEY` is set.
 2. Prefer `post` when the user wants to publish; if the API indicates authorization is required, run `authorize` and return the `authorization_url` (or `data.auth_url` from the raw response).
-3. Default to `--type quote` for publishing. Only pass `--type reply` when the user explicitly says they want to reply.
-4. In this skill, `reply` only controls the `type` argument passed to the Python client. It does not require asking the user for a target tweet URL or tweet ID.
+3. Default to `--type quote` for publishing. Only pass `--type reply` when the user explicitly says they want to use reply relationships for a threaded post.
+4. In this skill, `--type reply` does not mean replying to a target tweet. It only controls how multi-chunk content is threaded.
 5. If the user says things like `use reply mode to post: ...`, `使用reply方式发送推文：...`, or `reply发这条：...`, run the `post` command directly with `--type reply`.
-6. Do not ask follow-up questions about which tweet to reply to unless the user explicitly asks to target a specific tweet.
-7. Do not ask for Twitter passwords or use cookie/proxy login flows.
-8. Do not claim the post succeeded until `post` returns success.
+6. If the user explicitly provides a target tweet ID, include `--in-reply-to-tweet-id <tweet_id>` to start the thread from that external tweet.
+7. Do not ask for a tweet link or tweet ID just because the user requested `reply`; only use `--in-reply-to-tweet-id` when the user explicitly wants to target a specific tweet.
+8. Do not ask for Twitter passwords or use cookie/proxy login flows.
+9. Do not claim the post succeeded until `post` returns success.
 
 #### Character Limit & Thread Splitting Rules:
 1. Maximum 280 characters per tweet (Chinese/full-width characters/Emojis count as 1 character each);
 2. If content exceeds 280 characters:
    - The Python client automatically splits content into chunks before publishing;
-   - Follow-up chunks are published as a chained thread by quoting the previous tweet with `quote_tweet_id`;
+   - Follow-up chunks are published as a chained thread using `quote_tweet_id` when `--type quote` is selected;
+   - Follow-up chunks are published as a chained thread using `in_reply_to_tweet_id` when `--type reply` is selected;
 3. If any chunk fails to post, the entire thread publishing stops and returns an error.
 
 ## Python Client
@@ -256,6 +258,7 @@ python3 {baseDir}/scripts/twitter_client.py authorize
 python3 {baseDir}/scripts/twitter_client.py authorize --open-browser
 python3 {baseDir}/scripts/twitter_client.py post --text "Hello from OAuth"
 python3 {baseDir}/scripts/twitter_client.py post --text "Hello from OAuth" --type reply
+python3 {baseDir}/scripts/twitter_client.py post --text "Reply content" --in-reply-to-tweet-id "1888888888888888888"
 ```
 
 ## API Endpoints Reference
@@ -296,7 +299,7 @@ python3 {baseDir}/scripts/twitter_client.py post --text "Hello from OAuth" --typ
 | Endpoint | Description | Key Params |
 |----------|-------------|------------|
 | `/twitter/auth_twitter` | Get OAuth authorization URL | `aisa_api_key` |
-| `/twitter/post_twitter` | Publish a post | `aisa_api_key`, `content`, `media_ids` (optional), `type` (optional), `quote_tweet_id` (optional, internal chaining support) |
+| `/twitter/post_twitter` | Publish a post | `aisa_api_key`, `content`, `media_ids` (optional), `type` (optional), `quote_tweet_id` (optional), `in_reply_to_tweet_id` (optional) |
 
 Auth (relay only): JSON body field `aisa_api_key` (no `Authorization: Bearer` on these POSTs).
 
