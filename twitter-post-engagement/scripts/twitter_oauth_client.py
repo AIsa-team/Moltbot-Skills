@@ -4,7 +4,7 @@ Twitter relay client for local OAuth authorization and tweet publishing.
 
 Commands:
     python twitter_oauth_client.py authorize [--callback-url <url>] [--open-browser]
-    python twitter_oauth_client.py post --text "Hello" [--media-id <id> ...] [--type <quote|reply>]
+    python twitter_oauth_client.py post --text "Hello" [--media-id <id> ...] [--type <quote|reply>] [--in-reply-to-tweet-id <id>]
     python twitter_oauth_client.py status
 """
 
@@ -176,11 +176,11 @@ def publish_chunks(
     config: Dict[str, Any],
     chunks: list[str],
     media_ids: Optional[list[str]] = None,
-    initial_quote_tweet_id: Optional[str] = None,
+    initial_parent_tweet_id: Optional[str] = None,
     post_type: str = "quote",
 ) -> Dict[str, Any]:
     should_thread = len(chunks) > 1
-    previous_tweet_id = initial_quote_tweet_id
+    previous_tweet_id = initial_parent_tweet_id
     publish_results = []
 
     for index, chunk in enumerate(chunks):
@@ -189,14 +189,14 @@ def publish_chunks(
             config,
             content=chunk,
             media_ids=current_media_ids,
-            quote_tweet_id=previous_tweet_id,
+            parent_tweet_id=previous_tweet_id,
             post_type=post_type,
         )
         publish_results.append(
             {
                 "index": index + 1,
                 "content": chunk,
-                "quote_tweet_id": previous_tweet_id,
+                "parent_tweet_id": previous_tweet_id,
                 "result": result,
             }
         )
@@ -237,7 +237,7 @@ def post_single_tweet(
     *,
     content: str,
     media_ids: Optional[list[str]] = None,
-    quote_tweet_id: Optional[str] = None,
+    parent_tweet_id: Optional[str] = None,
     post_type: str = "quote",
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
@@ -247,8 +247,9 @@ def post_single_tweet(
     }
     if media_ids:
         payload["media_ids"] = media_ids
-    if quote_tweet_id:
-        payload["quote_tweet_id"] = quote_tweet_id
+    if parent_tweet_id:
+        parent_key = "in_reply_to_tweet_id" if post_type == "reply" else "quote_tweet_id"
+        payload[parent_key] = parent_tweet_id
 
     return send_json_request(
         f"{config['base_url']}/twitter/post_twitter",
@@ -293,11 +294,13 @@ def command_post(args: argparse.Namespace) -> None:
     if not chunks:
         print(json.dumps({"ok": False, "error": "Post content must not be empty."}, indent=2, ensure_ascii=False))
         sys.exit(1)
+    effective_post_type = "reply" if args.in_reply_to_tweet_id and args.type == "quote" else args.type
     output = publish_chunks(
         config,
         chunks,
         media_ids=getattr(args, "media_id", None),
-        post_type=args.type,
+        post_type=effective_post_type,
+        initial_parent_tweet_id=args.in_reply_to_tweet_id,
     )
     print(json.dumps(output, indent=2, ensure_ascii=False))
     if not output["ok"]:
@@ -341,8 +344,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--type",
         choices=["quote", "reply"],
         default="quote",
-        help="Post type. Defaults to quote. Only use reply when the user explicitly asks for a reply.",
+        help="Relationship used to continue multi-chunk posts. Defaults to quote; use reply for reply-style threading.",
     )
+
+    post.add_argument(
+        "--in-reply-to-tweet-id",
+        help="Optional external parent tweet ID. When provided, the first chunk starts from that tweet before continuing the thread.",
+    )
+
     post.set_defaults(func=command_post)
 
     status = subparsers.add_parser("status", help="Show current relay client configuration")

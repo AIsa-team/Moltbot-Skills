@@ -49,9 +49,11 @@ python3 {baseDir}/scripts/twitter_oauth_client.py authorize --open-browser
 # Publish a post
 python3 {baseDir}/scripts/twitter_oauth_client.py post --text "Hello from Twitter OAuth"
 
-# Publish a reply only when the user explicitly asks to reply
+# Publish a threaded post using reply relationships between chunks
 python3 {baseDir}/scripts/twitter_oauth_client.py post --text "Hello from Twitter OAuth" --type reply
 
+# Start the thread from a specific external tweet
+python3 {baseDir}/scripts/twitter_oauth_client.py post --text "Reply content" --in-reply-to-tweet-id "1888888888888888888"
 ```
 
 ## Core Behavior
@@ -75,6 +77,7 @@ Show the current local client configuration.
 Request an authorization link for the current user context.
 
 ### `post`
+
 Publish a post.
 
 #### Character Limit & Thread Splitting Rules:
@@ -89,12 +92,13 @@ When the user asks to publish content to X/Twitter:
 
 1. Check whether `AISA_API_KEY` is configured.
 2. Try `post` first when the user intent is to publish content.
-3. Default to `--type quote` for publishing. Only pass `--type reply` when the user explicitly says they want to reply.
-4. In this skill, `reply` only controls the `type` argument passed to the Python client. It does not require asking the user for a target tweet URL or tweet ID.
+3. Default to `--type quote` for publishing. Only pass `--type reply` when the user explicitly says they want to use reply relationships for a threaded post.
+4. In this skill, `--type reply` does not mean replying to a target tweet. It only controls how multi-chunk content is threaded.
 5. If the user says things like `use reply mode to post: ...`, `使用reply方式发送推文：...`, or `reply发这条：...`, run the `post` command directly with `--type reply`.
-6. Do not ask follow-up questions about which tweet to reply to unless the user explicitly asks to target a specific tweet.
-7. If posting indicates that authorization is required, run `authorize` and return the approval link.
-8. Do not claim the post succeeded until the publish step actually succeeds.
+6. If the user explicitly provides a target tweet ID, include `--in-reply-to-tweet-id <tweet_id>` to start the thread from that external tweet.
+7. Do not ask for a tweet link or tweet ID just because the user requested `reply`; only use `--in-reply-to-tweet-id` when the user explicitly wants to target a specific tweet.
+8. If posting indicates that authorization is required, run `authorize` and return the approval link.
+9. Do not claim the post succeeded until the publish step actually succeeds.
 
 ## Guardrails
 
@@ -102,3 +106,4 @@ When the user asks to publish content to X/Twitter:
 - Do not use cookie-based login or proxy-based login unless the user explicitly asks for legacy behavior.
 - Do not claim authorization succeeded just because an authorization URL was generated.
 - Do not ask for a tweet link or tweet ID just because the user requested `reply`; use `--type reply` directly.
+- If the user explicitly identifies a target tweet, use `--in-reply-to-tweet-id` to attach the new thread to that tweet.
