@@ -175,7 +175,7 @@ Posting does **not** use cookies, passwords, or proxies. Use the AIsa OAuth rela
 - `POST /apis/v1/twitter/auth_twitter` — returns an authorization URL for the user to open in a browser
 - `POST /apis/v1/twitter/post_twitter` — publishes content after the user has authorized
 
-Both relay requests send **`aisa_api_key` in the JSON body**. Do **not** rely on `Authorization: Bearer` for these two POSTs.
+Both relay requests send **`Authorization: Bearer $AISA_API_KEY`**. The client also keeps **`aisa_api_key` in the JSON body** for compatibility.
 
 Required / optional JSON body fields:
 
@@ -186,11 +186,13 @@ Required / optional JSON body fields:
 # Request authorization URL
 curl -X POST "https://api.aisa.one/apis/v1/twitter/auth_twitter" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AISA_API_KEY" \
   -d "{\"aisa_api_key\":\"$AISA_API_KEY\"}"
 
 # Publish a post (after user completes OAuth in browser)
 curl -X POST "https://api.aisa.one/apis/v1/twitter/post_twitter" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $AISA_API_KEY" \
   -d "{\"aisa_api_key\":\"$AISA_API_KEY\",\"content\":\"Hello from OpenClaw!\",\"type\":\"quote\"}"
 ```
 
@@ -298,10 +300,10 @@ python3 {baseDir}/scripts/twitter_client.py post --text "Reply content" --in-rep
 
 | Endpoint | Description | Key Params |
 |----------|-------------|------------|
-| `/twitter/auth_twitter` | Get OAuth authorization URL | `aisa_api_key` |
-| `/twitter/post_twitter` | Publish a post | `aisa_api_key`, `content`, `media_ids` (optional), `type` (optional), `quote_tweet_id` (optional), `in_reply_to_tweet_id` (optional) |
+| `/twitter/auth_twitter` | Get OAuth authorization URL | `Authorization: Bearer $AISA_API_KEY`, `aisa_api_key` |
+| `/twitter/post_twitter` | Publish a post | `Authorization: Bearer $AISA_API_KEY`, `aisa_api_key`, `content`, `media_ids` (optional), `type` (optional), `quote_tweet_id` (optional), `in_reply_to_tweet_id` (optional) |
 
-Auth (relay only): JSON body field `aisa_api_key` (no `Authorization: Bearer` on these POSTs).
+Auth (relay only): `Authorization: Bearer $AISA_API_KEY`, while the JSON body also includes `aisa_api_key` for compatibility.
 
 ## Pricing
 

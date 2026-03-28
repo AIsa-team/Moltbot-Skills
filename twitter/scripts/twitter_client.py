@@ -5,7 +5,8 @@ Twitter/X data and OAuth-based posting for autonomous agents.
 
 Read operations use GET with Authorization: Bearer AISA_API_KEY.
 Posting uses OAuth relay: POST /twitter/auth_twitter and /twitter/post_twitter
-OAuth relay POSTs include aisa_api_key in the JSON body (no Bearer on those POSTs).
+OAuth relay POSTs include Authorization: Bearer AISA_API_KEY and also keep
+aisa_api_key in the JSON body for compatibility.
 
 Usage (read):
     python twitter_client.py user-info --username <username>
@@ -95,12 +96,13 @@ class TwitterClient:
     def _relay_post_json(
         self, path: str, payload: Dict[str, Any], timeout: int
     ) -> Dict[str, Any]:
-        """POST JSON to OAuth relay endpoints; aisa_api_key must be in payload."""
+        """POST JSON to OAuth relay endpoints with Bearer auth and JSON payload."""
         url = f"{self.BASE_URL}{path}"
         request = urllib.request.Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
             headers={
+                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "User-Agent": "OpenClaw-Twitter/1.0",
@@ -474,7 +476,7 @@ def command_status(client: TwitterClient, args: argparse.Namespace) -> None:
         "base_url": TwitterClient.BASE_URL,
         "relay_timeout_seconds": _relay_timeout(),
         "oauth_endpoints": ["/twitter/auth_twitter", "/twitter/post_twitter"],
-        "note": "OAuth relay POSTs send aisa_api_key in JSON body (no Authorization header).",
+        "note": "OAuth relay POSTs send Authorization: Bearer AISA_API_KEY and also include aisa_api_key in JSON body.",
     }
     print(json.dumps(response, indent=2, ensure_ascii=False))
 

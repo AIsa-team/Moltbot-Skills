@@ -26,7 +26,7 @@ python scripts/twitter_client.py post --text "Reply to this tweet" --in-reply-to
 ## Features
 
 - **Read**: User info, tweets, search, trends, followers, lists, communities, Spaces, etc.
-- **Post**: Browser OAuth via `POST /twitter/auth_twitter` and `POST /twitter/post_twitter` with `aisa_api_key` in the JSON body. `type=quote|reply` controls how long posts chain into a thread, and `in_reply_to_tweet_id` can attach the thread to a specific external tweet (no cookies, no proxy, no password).
+- **Post**: Browser OAuth via `POST /twitter/auth_twitter` and `POST /twitter/post_twitter` with `Authorization: Bearer $AISA_API_KEY`. The client also keeps `aisa_api_key` in the JSON body for compatibility. `type=quote|reply` controls how long posts chain into a thread, and `in_reply_to_tweet_id` can attach the thread to a specific external tweet (no cookies, no proxy, no password).
 
 
 ## Get API Key
