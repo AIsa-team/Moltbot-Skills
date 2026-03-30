@@ -60,6 +60,7 @@ curl -X GET "https://api.aisa.one/apis/v1/polymarket/markets?search=election&sta
 
 ```bash
 # Fetch the current market price for a market by token_id
+# token_id comes from side_a.id or side_b.id in /polymarket/markets response
 curl -X GET "https://api.aisa.one/apis/v1/polymarket/market-price/{token_id}" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
@@ -84,6 +85,7 @@ curl -X GET "https://api.aisa.one/apis/v1/polymarket/orders?market={market_id}" 
 
 ```bash
 # Fetch historical orderbook snapshots for a specific asset
+# token_id comes from side_a.id or side_b.id in /polymarket/markets response
 curl -X GET "https://api.aisa.one/apis/v1/polymarket/orderbooks?token_id={token_id}" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
@@ -92,6 +94,7 @@ curl -X GET "https://api.aisa.one/apis/v1/polymarket/orderbooks?token_id={token_
 
 ```bash
 # Fetch historical candlestick data for a market
+# condition_id comes from /polymarket/markets response
 curl -X GET "https://api.aisa.one/apis/v1/polymarket/candlesticks/{condition_id}?interval=60" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
@@ -134,6 +137,7 @@ curl -X GET "https://api.aisa.one/apis/v1/kalshi/markets?search=fed%20rate" \
 
 ```bash
 # Fetch the current market price for a Kalshi market
+# market_ticker comes from /kalshi/markets response
 curl -X GET "https://api.aisa.one/apis/v1/kalshi/market-price/{market_ticker}" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
@@ -142,6 +146,7 @@ curl -X GET "https://api.aisa.one/apis/v1/kalshi/market-price/{market_ticker}" \
 
 ```bash
 # Fetch historical trade data for Kalshi markets
+# ticker (market_ticker) comes from /kalshi/markets response
 curl -X GET "https://api.aisa.one/apis/v1/kalshi/trades?ticker={ticker}" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
@@ -150,6 +155,7 @@ curl -X GET "https://api.aisa.one/apis/v1/kalshi/trades?ticker={ticker}" \
 
 ```bash
 # Fetch historical orderbook snapshots for a specific Kalshi market
+# ticker (market_ticker) comes from /kalshi/markets response
 curl -X GET "https://api.aisa.one/apis/v1/kalshi/orderbooks?ticker={ticker}" \
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
