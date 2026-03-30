@@ -1,252 +1,257 @@
-name: prediction-market
-description: Prediction markets data - Polymarket, Kalshi markets, prices, positions, and trades
+---
+name: Prediction Market Data
+description: "Prediction markets data - Polymarket, Kalshi markets, prices, positions, and trades"
+homepage: https://openclaw.ai
+metadata: {"openclaw":{"emoji":"📈","requires":{"bins":["curl","python3"],"env":["AISA_API_KEY"]},"primaryEnv":"AISA_API_KEY"}}
 ---
 
-# Prediction Market Data
+# OpenClaw Prediction Market 📈
 
-Get current odds, prices, and market data from prediction markets like Polymarket and Kalshi. Access historical orderbook data, candlestick charts, trade history, wallet positions, and more.
+**Prediction markets data access for autonomous agents. Powered by AIsa.**
 
-## When to Use
+One API key. Full Polymarket and Kalshi intelligence.
 
-- User asks about prediction market odds
-- User wants to know probability of an event
-- User asks "what are the odds of [event]?"
-- Research on market sentiment
-- Election or event probability checks
-- Trading analysis on historical prices and orderbooks
-- Portfolio tracking and P&L monitoring
-- Arbitrage detection across platforms
+## What Can You Do?
 
-## How It Works
+### Probability Checks
+```text
+"What are the odds of [event] happening?"
+```
 
-Uses the Dome API at `https://api.aisa.one/apis/v1/dome` to aggregate prediction market data from Polymarket and Kalshi.
+### Market Sentiment
+```text
+"Research the current market sentiment on the upcoming election."
+```
 
-## Polymarket
+### Trading Analysis
+```text
+"Analyze historical prices and orderbooks for this market."
+```
 
-### Markets
+### Portfolio Tracking
+```text
+"Track portfolio positions and P&L for wallet address X."
+```
 
-Find markets on Polymarket using various filters including the ability to search.
+### Arbitrage Detection
+```text
+"Find arbitrage opportunities across Polymarket and Kalshi."
+```
 
-Parameters:
-- market_slug (string[]) - Filter markets by market slug(s). Can provide multiple values.
-- event_slug (string[]) - Filter markets by event slug(s). Can provide multiple values.
-- condition_id (string[]) - Filter markets by condition ID(s). Can provide multiple values.
-- tags (string[]) - Filter markets by tag(s). Can provide multiple values.
-- search (string) - Search markets by keywords in title and description. Must be URL encoded (e.g., 'bitcoin%20price' for 'bitcoin price').
-- status (enum\<string\>) - Filter markets by status (whether they're open or closed)
-- min_volume (number) - Filter markets with total trading volume greater than or equal to this amount (USD)
-- limit (integer) - Number of markets to return (1-100). Default: 10 for search, 10 for regular queries.
-- offset (integer) - Number of markets to skip for pagination
-- start_time (integer) - Filter markets from this Unix timestamp in seconds (inclusive)
-- end_time (integer) - Filter markets until this Unix timestamp in seconds (inclusive)
+## Quick Start
 
 ```bash
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/markets?search=election&status=open"
+export AISA_API_KEY="your-key"
+```
 
-Market Price
-Fetches the current market price for a market by token_id. Allows historical lookups via the at_time query parameter.
+## Core Capabilities
 
-Parameters:
+### Polymarket
 
-at_time (integer) - Optional Unix timestamp (in seconds) to fetch a historical market price. If not provided, returns the most real-time price available.
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/market-price/{token_id}"
+#### Markets
 
-Activity
-Fetches activity data for a specific user with optional filtering by market, condition, and time range. Returns trading activity including MERGES, SPLITS, and REDEEMS.
+```bash
+# Find markets on Polymarket
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/markets?search=election&status=open" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Parameters:
+#### Market Price
 
-user* (string) - User wallet address to fetch activity for
-start_time (integer) - Filter activity from this Unix timestamp in seconds (inclusive)
-end_time (integer) - Filter activity until this Unix timestamp in seconds (inclusive)
-market_slug (string) - Filter activity by market slug
-condition_id (string) - Filter activity by condition ID
-limit (integer) - Number of activities to return (1-1000)
-offset (integer) - Number of activities to skip for pagination
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/activity?user={wallet_address}"
+```bash
+# Fetch the current market price for a market by token_id
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/market-price/{token_id}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Trade History
-Fetches historical trade data with optional filtering by market, condition, token, time range, and user's wallet address.
+#### Activity
 
-Parameters:
+```bash
+# Fetch activity data for a specific user
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/activity?user={wallet_address}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-market_slug (string) - Filter orders by market slug
-condition_id (string) - Filter orders by condition ID
-token_id (string) - Filter orders by token ID
-start_time (integer) - Filter orders from this Unix timestamp in seconds (inclusive)
-end_time (integer) - Filter orders until this Unix timestamp in seconds (inclusive)
-limit (integer) - Number of orders to return (1-1000)
-offset (integer) - Number of orders to skip for pagination
-user (string) - Filter orders by user (wallet address)
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/orders?market={market_id}"
+#### Trade History
 
-Orderbook History
-Fetches historical orderbook snapshots for a specific asset (token ID) over a specified time range. If no start_time and end_time are provided, returns the latest orderbook snapshot for the market.
+```bash
+# Fetch historical trade data
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/orders?market={market_id}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Parameters:
+#### Orderbook History
 
-token_id* (string) - The token id (asset) for the Polymarket market
-start_time (integer) - Start time in Unix timestamp (milliseconds). Optional - if not provided along with end_time, returns the latest orderbook snapshot.
-end_time (integer) - End time in Unix timestamp (milliseconds). Optional - if not provided along with start_time, returns the latest orderbook snapshot.
-limit (integer) - Maximum number of snapshots to return (default: 100, max: 200). Ignored when fetching the latest orderbook without start_time and end_time.
-pagination_key (string) - Pagination key to get the next chunk of data. Ignored when fetching the latest orderbook without start_time and end_time.
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/orderbooks?token_id={token_id}"
+```bash
+# Fetch historical orderbook snapshots for a specific asset
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/orderbooks?token_id={token_id}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Candlesticks
-Fetches historical candlestick data for a market identified by condition_id, over a specified interval.
+#### Candlesticks
 
-Parameters:
+```bash
+# Fetch historical candlestick data for a market
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/candlesticks/{condition_id}?interval=60" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-start_time* (integer) - Unix timestamp (in seconds) for start of time range
-end_time* (integer) - Unix timestamp (in seconds) for end of time range
-interval (enum<integer>) - Interval length: 1 = 1m, 60 = 1h, 1440 = 1d. Defaults to 1m. Note: There are range limits for interval — specifically: 1 (1m): max range 1 week, 60 (1h): max range 1 month, 1440 (1d): max range 1 year
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/candlesticks/{condition_id}?interval=60"
+#### Positions
 
-Positions
-Fetches all Polymarket positions for a proxy wallet address. Returns positions with balance >= 10,000 shares (0.01 normalized) with market info.
+```bash
+# Fetch all Polymarket positions for a proxy wallet address
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/positions/wallet/{wallet_address}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Parameters:
+#### Wallet
 
-limit (integer) - Maximum number of positions to return per page. Defaults to 100, maximum 100.
-pagination_key (string) - Pagination key returned from previous request to fetch next page of results
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/positions/wallet/{wallet_address}"
+```bash
+# Fetch wallet information
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/wallet?eoa={wallet_address}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Wallet
-Fetches wallet information by providing either an EOA (Externally Owned Account) address or a proxy wallet address. Returns the associated EOA, proxy, and wallet type. Optionally returns trading metrics including total volume, number of trades, and unique markets traded when with_metrics=true.
+#### Wallet Profit-and-Loss
 
-Parameters:
+```bash
+# Fetch realized profit and loss (PnL) for a specific wallet address
+curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/wallet/pnl/{wallet_address}?granularity=day" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-eoa (string) - EOA (Externally Owned Account) wallet address. Either eoa or proxy must be provided, but not both.
-proxy (string) - Proxy wallet address. Either eoa or proxy must be provided, but not both.
-with_metrics (enum<string>) - Whether to include wallet trading metrics (total volume, trades, and markets). Pass true to include metrics. Metrics are computed only when explicitly requested for performance reasons.
-start_time (integer) - Optional start date for metrics calculation (Unix timestamp in seconds). Only used when with_metrics=true.
-end_time (integer) - Optional end date for metrics calculation (Unix timestamp in seconds). Only used when with_metrics=true.
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/wallet?eoa={wallet_address}"
+### Kalshi
 
-Wallet Profit-and-Loss
-Fetches the realized profit and loss (PnL) for a specific wallet address over a specified time range and granularity. Note: This will differ to what you see on Polymarket's dashboard since Polymarket showcases historical unrealized PnL.
+#### Markets
 
-Parameters:
+```bash
+# Find markets on Kalshi
+curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/markets?search=fed%20rate" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-granularity* (enum<string>) - Example: "day"
-start_time (integer) - Defaults to first day of first trade if not provided.
-end_time (integer) - Defaults to the current date if not provided.
-curl -X GET "https://api.aisa.one/apis/v1/dome/polymarket/wallet/pnl/{wallet_address}?granularity=day"
+#### Market Price
 
-Kalshi
-Markets
-Find markets on Kalshi using various filters including market ticker, event ticker, status, and volume.
+```bash
+# Fetch the current market price for a Kalshi market
+curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/market-price/{market_ticker}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Parameters:
+#### Trade History
 
-market_ticker (string[]) - Filter markets by market ticker(s). Can provide multiple values.
-event_ticker (string[]) - Filter markets by event ticker(s). Can provide multiple values.
-search (string) - Search markets by keywords in title and description. Must be URL encoded (e.g., 'bitcoin%20price' for 'bitcoin price').
-status (enum<string>) - Filter markets by status (whether they're open or closed)
-min_volume (number) - Filter markets with total trading volume greater than or equal to this amount (in dollars)
-limit (integer) - Number of markets to return (1-100). Default: 10.
-offset (integer) - Number of markets to skip for pagination
-curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/markets?search=fed%20rate"
+```bash
+# Fetch historical trade data for Kalshi markets
+curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/trades?ticker={ticker}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Market Price
-Fetches the current market price for a Kalshi market by market_ticker. Returns prices for both yes and no sides. Allows historical lookups via the at_time query parameter.
+#### Orderbook History
 
-Parameters:
+```bash
+# Fetch historical orderbook snapshots for a specific Kalshi market
+curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/orderbooks?ticker={ticker}" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-at_time (integer) - Optional Unix timestamp (in seconds) to fetch a historical market price. If not provided, returns the most real-time price available.
-curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/market-price/{market_ticker}"
+### Cross-Platform
 
-Trade History
-Fetches historical trade data for Kalshi markets with optional filtering by ticker and time range. Returns executed trades with pricing, volume, and taker side information. All timestamps are in seconds.
+#### Sports Markets
 
-Parameters:
+```bash
+# Find equivalent markets across platforms for sports events
+curl -X GET "https://api.aisa.one/apis/v1/dome/matching-markets/sports" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-ticker (string) - The Kalshi market ticker to filter trades
-start_time (integer) - Start time in Unix timestamp (seconds)
-end_time (integer) - End time in Unix timestamp (seconds)
-limit (integer) - Maximum number of trades to return (default: 100)
-offset (integer) - Number of trades to skip for pagination
-curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/trades?ticker={ticker}"
+#### Sports Markets by Date
 
-Orderbook History
-Fetches historical orderbook snapshots for a specific Kalshi market (ticker) over a specified time range. If no start_time and end_time are provided, returns the latest orderbook snapshot for the market.
+```bash
+# Find equivalent markets across platforms for sports events by date
+curl -X GET "https://api.aisa.one/apis/v1/dome/matching-markets/sports/nba?date=2024-03-01" \
+  -H "Authorization: Bearer $AISA_API_KEY"
+```
 
-Parameters:
+## API Endpoints Reference
 
-ticker* (string) - The Kalshi market ticker
-start_time (integer) - Start time in Unix timestamp (milliseconds). Optional - if not provided along with end_time, returns the latest orderbook snapshot.
-end_time (integer) - End time in Unix timestamp (milliseconds). Optional - if not provided along with start_time, returns the latest orderbook snapshot.
-limit (integer) - Maximum number of snapshots to return (default: 100, max: 200). Ignored when fetching the latest orderbook without start_time and end_time.
-curl -X GET "https://api.aisa.one/apis/v1/dome/kalshi/orderbooks?ticker={ticker}"
+### Polymarket Endpoints (GET)
 
-Cross-Platform
-Sports Markets
-Find equivalent markets across different prediction market platforms (Polymarket, Kalshi, etc.) for sports events using a Polymarket market slug or a Kalshi event ticker.
+| Endpoint | Description | Key Params |
+|----------|-------------|------------|
+| `/dome/polymarket/markets` | Find markets | `search`, `status`, `market_slug`, `limit` |
+| `/dome/polymarket/market-price/{token_id}` | Get market price | `token_id`, `at_time` |
+| `/dome/polymarket/activity` | Get user activity | `user`, `start_time`, `end_time` |
+| `/dome/polymarket/orders` | Get trade history | `market_slug`, `token_id`, `user` |
+| `/dome/polymarket/orderbooks` | Get orderbook history | `token_id`, `start_time`, `end_time` |
+| `/dome/polymarket/candlesticks/{condition_id}` | Get candlestick data | `condition_id`, `start_time`, `end_time`, `interval` |
+| `/dome/polymarket/positions/wallet/{wallet_address}` | Get wallet positions | `wallet_address`, `limit` |
+| `/dome/polymarket/wallet` | Get wallet info | `eoa` or `proxy`, `with_metrics` |
+| `/dome/polymarket/wallet/pnl/{wallet_address}` | Get wallet PnL | `wallet_address`, `granularity` |
 
-Parameters:
+### Kalshi Endpoints (GET)
 
-polymarket_market_slug (string[]) - The Polymarket market slug(s) to find matching markets for. To get multiple markets at once, provide the query param multiple times with different slugs. Cannot be combined with kalshi_event_ticker.
-kalshi_event_ticker (string[]) - The Kalshi event ticker(s) to find matching markets for. To get multiple markets at once, provide the query param multiple times with different tickers. Cannot be combined with polymarket_market_slug.
-curl -X GET "https://api.aisa.one/apis/v1/dome/matching-markets/sports"
+| Endpoint | Description | Key Params |
+|----------|-------------|------------|
+| `/dome/kalshi/markets` | Find markets | `search`, `status`, `market_ticker` |
+| `/dome/kalshi/market-price/{market_ticker}` | Get market price | `market_ticker`, `at_time` |
+| `/dome/kalshi/trades` | Get trade history | `ticker`, `start_time`, `end_time` |
+| `/dome/kalshi/orderbooks` | Get orderbook history | `ticker`, `start_time`, `end_time` |
 
-Sports Markets by Date
-Find equivalent markets across different prediction market platforms (Polymarket, Kalshi, etc.) for sports events by sport and date.
+### Cross-Platform Endpoints (GET)
 
-Supported sports: nba, nfl, mlb, nhl, soccer, tennis
+| Endpoint | Description | Key Params |
+|----------|-------------|------------|
+| `/dome/matching-markets/sports` | Find matching sports markets | `polymarket_market_slug` or `kalshi_event_ticker` |
+| `/dome/matching-markets/sports/{sport}` | Find sports markets by date | `sport`, `date` |
 
-Parameters:
+## Response Schemas
 
-date* (string) - The date to find matching markets for in YYYY-MM-DD format
-curl -X GET "https://api.aisa.one/apis/v1/dome/matching-markets/sports/nba?date=2024-03-01"
-
-Response Schemas
-Markets Response (/polymarket/markets, /kalshi/markets)
+### Markets Response
 Returns markets array:
+- `title` (string) - Market question (e.g., "Will Trump nationalize elections?")
+- `market_slug` (string) - URL-friendly identifier
+- `condition_id` (string) - Blockchain condition ID
+- `start_time` / `end_time` (integer) - Unix timestamps
+- `completed_time` (integer|null) - Null if still open
+- `tags` (array) - Category tags (e.g., ["politics", "us election"])
+- `volume_1_week` / `volume_1_month` / `volume_1_year` / `volume_total` (number) - Trading volume in USD
+- `side_a` / `side_b` (object) - id and label (typically "Yes"/"No")
+- `winning_side` (object|null) - Null if unresolved
+- `image` (string) - Market thumbnail URL
 
-title (string) - Market question (e.g., "Will Trump nationalize elections?")
-market_slug (string) - URL-friendly identifier
-condition_id (string) - Blockchain condition ID
-start_time / end_time (integer) - Unix timestamps
-completed_time (integer|null) - Null if still open
-tags (array) - Category tags (e.g., ["politics", "us election"])
-volume_1_week / volume_1_month / volume_1_year / volume_total (number) - Trading volume in USD
-side_a / side_b (object) - id and label (typically "Yes"/"No")
-winning_side (object|null) - Null if unresolved
-image (string) - Market thumbnail URL
-Activity Response (/polymarket/activity)
+### Activity Response
 Returns activities array:
+- `title` (string) - Market title
+- `market_slug` (string) - Market identifier
+- `side` (string) - Trade side: BUY, SELL, or MERGE
+- `shares` (integer) - Raw share amount
+- `shares_normalized` (number) - Human-readable share amount
+- `price` (number) - Trade price (0-1, represents probability)
+- `timestamp` (integer) - Unix timestamp of the trade
+- `user` (string) - Wallet address of the trader
+- `tx_hash` (string) - Blockchain transaction hash
 
-title (string) - Market title
-market_slug (string) - Market identifier
-side (string) - Trade side: BUY, SELL, or MERGE
-shares (integer) - Raw share amount
-shares_normalized (number) - Human-readable share amount
-price (number) - Trade price (0-1, represents probability)
-timestamp (integer) - Unix timestamp of the trade
-user (string) - Wallet address of the trader
-tx_hash (string) - Blockchain transaction hash
+## Understanding Odds
+- Prices are shown as decimals (0.65 = 65% probability)
+- "Yes" price = probability market thinks event will happen
+- Higher volume = more confidence/liquidity
+- Prices change based on trading activity
 
-Understanding Odds
-Prices are shown as decimals (0.65 = 65% probability)
-"Yes" price = probability market thinks event will happen
-Higher volume = more confidence/liquidity
-Prices change based on trading activity
+## Pricing
 
-Use Cases
-Market Research: Track prediction market sentiment
-Trading Analysis: Analyze historical prices and orderbooks
-Portfolio Tracking: Monitor positions and P&L
-Arbitrage: Find price differences across platforms
-Forecasting: Use market prices as probability estimates
+| API | Cost |
+|-----|------|
+| Prediction market read query | ~$0.01 |
 
-Error Handling
-400 - search requires status parameter (open or closed) — always include both
-401 - Invalid API key
-429 - Rate limit — wait and retry
-Empty markets array means no markets match the search term
-Activity endpoint returns recent trades globally — no filters required
-Tips
-Check multiple markets for the same event
-Volume indicates market confidence
-Recent activity shows sentiment shifts
-Polymarket focuses on politics/world events, Kalshi on finance/weather
+Every response includes `usage.cost` and `usage.credits_remaining`.
+
+## Get Started
+
+1. Sign up at [aisa.one](https://aisa.one)
+2. Get your API key
+3. Add credits (pay-as-you-go)
+4. Set environment variable: `export AISA_API_KEY="your-key"`
+
+## Full API Reference
+
+See [API Reference](https://docs.aisa.one/reference/) for complete endpoint documentation.
