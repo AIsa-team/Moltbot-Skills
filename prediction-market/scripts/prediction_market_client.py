@@ -1,15 +1,7 @@
-upload this file to the prediction-market/scripts folder. 
-
-
----
-
-### `scripts/prediction_market_client.py`
-
-```python
 #!/usr/bin/env python3
 
 """
-OpenClaw Prediction Market - AIsa Dome API Client
+OpenClaw Prediction Market - AIsa API Client
 Prediction market data from Polymarket and Kalshi for autonomous agents.
 
 Usage:
@@ -45,10 +37,10 @@ import urllib.error
 from typing import Any, Dict, List, Optional
 
 
-class DomeClient:
-    """OpenClaw Prediction Market - AIsa Dome API Client."""
+class PredictionMarketClient:
+    """OpenClaw Prediction Market - AIsa API Client."""
 
-    BASE_URL = "https://api.aisa.one/apis/v1/dome"
+    BASE_URL = "https://api.aisa.one/apis/v1"
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get("AISA_API_KEY")
@@ -283,7 +275,7 @@ class DomeClient:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="OpenClaw Prediction Market - Polymarket & Kalshi data via AIsa Dome API",
+        description="OpenClaw Prediction Market - Polymarket & Kalshi data via AIsa API",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -438,7 +430,7 @@ Examples:
         sys.exit(1)
 
     try:
-        client = DomeClient()
+        client = PredictionMarketClient()
     except ValueError as e:
         print(json.dumps({"success": False, "error": {"code": "AUTH_ERROR", "message": str(e)}}))
         sys.exit(1)
@@ -530,4 +522,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-```
